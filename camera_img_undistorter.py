@@ -11,17 +11,16 @@ class CameraImageUndistorter(object):
 
     mtx = None
     dist = None
+    nx = 9
+    ny = 6
 
     def __init__(self):
-        nx = 9
-        ny = 6
-
         obj_points = []
         img_points = []
         img_shape = None
 
-        obj_points_single = np.zeros((nx * ny, 3), np.float32)
-        obj_points_single[:, :2] = np.mgrid[0:nx, 0:ny].T.reshape(-1, 2)  # TODO explain
+        obj_points_single = np.zeros((self.nx * self.ny, 3), np.float32)
+        obj_points_single[:, :2] = np.mgrid[0:self.nx, 0:self.ny].T.reshape(-1, 2)  # TODO explain
 
         image_files = glob.glob('./camera_cal/calibration*.jpg')
         for img_file in image_files:
@@ -32,7 +31,7 @@ class CameraImageUndistorter(object):
             if img_shape is None:
                 img_shape = gray.shape
 
-            ret, corners = cv2.findChessboardCorners(gray, (nx, ny), None)
+            ret, corners = cv2.findChessboardCorners(gray, (self.nx, self.ny), None)
 
             if ret:
                 img_points.append(corners)
