@@ -15,7 +15,7 @@ class LaneIsolator(object):
         self.mag_thresh = mag_thresh
         self.dir_thresh = dir_thresh
 
-    def _abs_sobel_thresh(img, orient='x', sobel_kernel=3, thresh_min=0, thresh_max=255):
+    def _abs_sobel_thresh(self, img, orient='x', sobel_kernel=3, thresh_min=0, thresh_max=255):
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         # TODO only sobel x required?
         # Apply x or y gradient with the OpenCV Sobel() function
@@ -33,7 +33,7 @@ class LaneIsolator(object):
 
     # Define a function to return the magnitude of the gradient
     # for a given sobel kernel size and threshold values
-    def _mag_thresh(img, sobel_kernel=3, mag_thresh=(0, 255)):
+    def _mag_thresh(self, img, sobel_kernel=3, mag_thresh=(0, 255)):
         # Convert to grayscale
         gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
         # Take both Sobel x and y gradients
@@ -52,7 +52,7 @@ class LaneIsolator(object):
         return binary_output
 
     # Define a function to threshold an image for a given range and Sobel kernel
-    def _dir_threshold(img, sobel_kernel=3, thresh=(0, np.pi / 2)):
+    def _dir_threshold(self, img, sobel_kernel=3, thresh=(0, np.pi / 2)):
         # Grayscale
         gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
         # Calculate the x and y gradients
@@ -68,10 +68,13 @@ class LaneIsolator(object):
         return binary_output
 
     def isolate_lanes(self, img):
-        gradx = self._abs_sobel_thresh(img, orient='x', sobel_kernel=self.ksize, thresh_min=self.gradx_thresh[0],
-                                               thresh_max=self.gradx_thresh[1])
-        grady = self._abs_sobel_thresh(img, orient='y', sobel_kernel=self.ksize, thresh_min=self.grady_thresh[0],
-                                               thresh_max=self.grady_thresh[1])
+        # TODO sobelx and sobely are calculated very often - can be optimized
+        gradx = self._abs_sobel_thresh(
+            img=img, orient='x', sobel_kernel=self.ksize,
+            thresh_min=self.gradx_thresh[0], thresh_max=self.gradx_thresh[1])
+        grady = self._abs_sobel_thresh(
+            img=img, orient='y', sobel_kernel=self.ksize,
+            thresh_min=self.grady_thresh[0], thresh_max=self.grady_thresh[1])
         mag_binary = self._mag_thresh(img, sobel_kernel=self.ksize, mag_thresh=self.mag_thresh)
         dir_binary = self._dir_threshold(img, sobel_kernel=self.ksize, thresh=self.dir_thresh)
 

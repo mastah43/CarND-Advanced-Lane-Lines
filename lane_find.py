@@ -29,12 +29,7 @@ def chessboard():
     img_undistorted = img_undistorter.undistort(img)
     #plot_images(img, img_unwarped)
 
-    img_undistorted = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-    # Choose a Sobel kernel size
-    ksize = 3  # Choose a larger odd number to smooth gradient measurements
-
-    img_binary = img_undistorted # TODO abs_sobel_thresh(img_undistorted, thresh_min=20, thresh_max=100)
+    img_binary = lane_isolator.isolate_lanes(img_undistorted)
     plot_images(img_undistorted, img_binary)
 
     # TODO use magnitude of gradient
@@ -48,13 +43,12 @@ def chessboard():
     img_birdview = img_transformer.to_birdview(img_binary)
     #plot_images(img_undistorted, img_birdview)
 
-    # TODO create binary image of lane lines
     # TODO detect lane lines
-    #img_sobel = abs_sobel_thresh(img)
-
     histogram = np.sum(img_birdview[img_birdview.shape[0] // 2:, :], axis=0)
     #plt.plot(histogram)
-    plt.show(block=True)
+    #plt.show(block=True)
+
+    # TODO fit polynomial
 
 
 if __name__ == '__main__':
