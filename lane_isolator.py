@@ -16,10 +16,7 @@ class LaneIsolator(object):
         self.dir_thresh = dir_thresh
 
     def _abs_sobel_thresh(self, img, orient='x', sobel_kernel=3, thresh_min=0, thresh_max=255):
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        # TODO only sobel x required?
-        # Apply x or y gradient with the OpenCV Sobel() function
-        # and take the absolute value
+        gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
         if orient == 'x':
             abs_sobel = np.absolute(cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=sobel_kernel))
         if orient == 'y':
@@ -67,8 +64,18 @@ class LaneIsolator(object):
         # Return the binary image
         return binary_output
 
+    def _color_threshold(self, img, thresh = (90, 255)):
+        hls = cv2.cvtColor(img, cv2.COLOR_BGR2HLS)
+        H = hls[:, :, 0]
+        L = hls[:, :, 1]
+        S = hls[:, :, 2]
+
+        binary = np.zeros_like(S)
+        binary[(S > thresh[0]) & (S <= thresh[1])] = 1
+        return binary
+
     def isolate_lanes(self, img):
-        # TODO sobelx and sobely are calculated very often - can be optimized
+        # TODO sobelx and sobely are calculated very often - can be optimized: calc here and pass as params
         gradx = self._abs_sobel_thresh(
             img=img, orient='x', sobel_kernel=self.ksize,
             thresh_min=self.gradx_thresh[0], thresh_max=self.gradx_thresh[1])
@@ -77,7 +84,14 @@ class LaneIsolator(object):
             thresh_min=self.grady_thresh[0], thresh_max=self.grady_thresh[1])
         mag_binary = self._mag_thresh(img, sobel_kernel=self.ksize, mag_thresh=self.mag_thresh)
         dir_binary = self._dir_threshold(img, sobel_kernel=self.ksize, thresh=self.dir_thresh)
+        color_binary = self._color_threshold(img, thresh = (90, 255))
 
         lanes = np.zeros_like(dir_binary)
-        lanes[((gradx == 1) & (grady == 1)) | ((mag_binary == 1) & (dir_binary == 1))] = 1
+        # TODO
+        #lanes[(gradx == 1)] = 1
+        lanes[(dir_binary == 1) & (mag_binary == 1) & (color_binary == 1)] = 1
+        #lanes[(color_binary == 1) & (dir_binary == 1)] = 1
+        #lanes[((gradx == 1) & (grady == 1))] = 1
+        #lanes[((mag_binary == 1) & (dir_binary == 1))] = 1
+        #lanes[((gradx == 1) & (grady == 1)) | ((mag_binary == 1) & (dir_binary == 1))] = 1
         return lanes

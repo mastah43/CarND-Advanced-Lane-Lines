@@ -7,7 +7,6 @@ class CameraImagePerspectiveTransform(object):
     """
         Supports transforming camera images to birdview images.
     """
-    M = None
 
     def __init__(self):
         img = cv2.imread('./camera_cal/calibration1.jpg')
@@ -23,7 +22,7 @@ class CameraImagePerspectiveTransform(object):
              [(img_size[0] / 4), img_size[1]],
              [(img_size[0] * 3 / 4), img_size[1]],
              [(img_size[0] * 3 / 4), 0]])
-        self.M = cv2.getPerspectiveTransform(src, dst)
+        self.m = cv2.getPerspectiveTransform(src, dst)
 
 
     def to_birdview(self, img):
@@ -33,4 +32,4 @@ class CameraImagePerspectiveTransform(object):
         :return:
         """
         img_size = (img.shape[1], img.shape[0])
-        return cv2.warpPerspective(img, self.M, img_size)
+        return cv2.warpPerspective(img, self.m, img_size)

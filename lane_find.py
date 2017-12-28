@@ -25,7 +25,7 @@ def chessboard():
     img_undistorter = CameraImageUndistorter()
     lane_isolator = LaneIsolator()
 
-    img = cv2.imread('./test_images/test1.jpg')
+    img = cv2.cvtColor(cv2.imread('./test_images/test1.jpg'), cv2.COLOR_BGR2RGB)
     img_undistorted = img_undistorter.undistort(img)
     #plot_images(img, img_unwarped)
 
