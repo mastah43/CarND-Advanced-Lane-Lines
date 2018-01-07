@@ -87,11 +87,5 @@ class LaneIsolator(object):
         color_binary = self._color_threshold(img, thresh = (90, 255))
 
         lanes = np.zeros_like(dir_binary)
-        # TODO
-        #lanes[(gradx == 1)] = 1
         lanes[(dir_binary == 1) & (mag_binary == 1) & (color_binary == 1)] = 1
-        #lanes[(color_binary == 1) & (dir_binary == 1)] = 1
-        #lanes[((gradx == 1) & (grady == 1))] = 1
-        #lanes[((mag_binary == 1) & (dir_binary == 1))] = 1
-        #lanes[((gradx == 1) & (grady == 1)) | ((mag_binary == 1) & (dir_binary == 1))] = 1
         return lanes
