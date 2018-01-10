@@ -14,11 +14,11 @@ class FittedLane(object):
         self.out_img = out_img
 
     def deviation_from_lane_center_meters(self):
-        y = self.out_img.shape[1] - 1
+        y = self.out_img.shape[0] - 1
         left_x = self.left_fit[0] * y ** 2 + self.left_fit[1] * y + self.left_fit[2]
         right_x = self.right_fit[0] * y ** 2 + self.right_fit[1] * y + self.right_fit[2]
         camera_x = (right_x - left_x) / 2 + left_x
-        center_x = self.out_img.shape[0] / 2
+        center_x = self.out_img.shape[1] / 2
         deviation_x = camera_x - center_x
         deviation_meters = deviation_x * FittedLane.xm_per_pix
         return deviation_meters
