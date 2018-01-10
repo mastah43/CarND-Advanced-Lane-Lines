@@ -24,7 +24,7 @@ class FittedLane(object):
         return deviation_meters
 
     def lane_radius_meters(self):
-        y_eval = self.out_img.shape[1] - 1
+        y_eval = self.out_img.shape[0] - 1
         left_fit_cr = self.left_fit_cr
         right_fit_cr = self.right_fit_cr
         left_curverad = ((1 + (2 * left_fit_cr[0] * y_eval * FittedLane.ym_per_pix + left_fit_cr[1]) ** 2) ** 1.5) / np.absolute(
