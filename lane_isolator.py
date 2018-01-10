@@ -86,6 +86,8 @@ class LaneIsolator(object):
         dir_binary = self._dir_threshold(img, sobel_kernel=self.ksize, thresh=self.dir_thresh)
         color_binary = self._color_threshold(img, thresh = (90, 255))
 
+        # TODO allow debug output of images
+
         lanes = np.zeros_like(dir_binary)
         lanes[(dir_binary == 1) & (mag_binary == 1) & (color_binary == 1)] = 1
         return lanes

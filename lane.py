@@ -1,6 +1,9 @@
 import numpy as np
 import cv2
 
+class LaneLine(object):
+    def __init__(self, fit, fit_cr):
+        pass
 
 class FittedLane(object):
     ym_per_pix = 30/720 # meters per pixel in y dimension
@@ -111,11 +114,13 @@ class FittedLane(object):
         rightx = nonzerox[right_lane_inds]
         righty = nonzeroy[right_lane_inds]
 
-        # Fit a second order polynomial to each
-        left_fit = np.polyfit(lefty, leftx, 2)
-        right_fit = np.polyfit(righty, rightx, 2)
+        if (len(rightx) == 0) | (len(righty) == 0) | (len(leftx) == 0) | (len(lefty) == 0):
+            return None
 
+            # Fit a second order polynomial for left and right lane
+        left_fit = np.polyfit(lefty, leftx, 2)
         left_fit_cr = np.polyfit(lefty * FittedLane.ym_per_pix, leftx * FittedLane.xm_per_pix, 2)
+        right_fit = np.polyfit(righty, rightx, 2)
         right_fit_cr = np.polyfit(righty * FittedLane.ym_per_pix, rightx * FittedLane.xm_per_pix, 2)
 
         return FittedLane(left_fit, right_fit, left_fit_cr, right_fit_cr, out_img)
