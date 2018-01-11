@@ -17,7 +17,7 @@ class LaneSmoother(object):
 
 
 # Define a class to receive the characteristics of each line detection
-class Line():
+class Line(object):
     def __init__(self):
         # was the line detected in the last iteration?
         self.detected = False
