@@ -41,7 +41,7 @@ class CameraImageUndistorter(object):
 
         ret, self.mtx, self.dist, rvecs, tvecs = cv2.calibrateCamera(obj_points, img_points, img_shape[::-1], None, None)
 
-    def undistort(self, img):
+    def undistort(self, img, img_out=None):
         """
         Undistorts the given image.
         :param img: input image

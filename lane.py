@@ -186,6 +186,8 @@ class FittedLane(object):
             self.lane_lines_not_parallel_count += 1
             lines_ok = False
 
+        # TODO check that slope of line is consistent (e.g. only one curve in it)
+
         return lines_ok
 
     def fit_adapt(self, img):
