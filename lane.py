@@ -125,6 +125,7 @@ class FittedLane(object):
         self.left_not_detected_count = 0
         self.right_not_detected_count = 0
         self.lane_width_too_narrow_count = 0
+        self.lane_lines_not_parallel_count = 0
 
     def deviation_from_lane_center_meters(self):
         y = LaneImageSpec.height - 1
@@ -142,7 +143,13 @@ class FittedLane(object):
         return (left_curve_rad + right_curve_rad) / 2
 
     @staticmethod
-    def lane_width_meters2(line_left, line_right):
+    def lane_radius_meters2(line_left : LaneLine, line_right : LaneLine):
+        left_curve_rad = line_left.curve_radius_meters()
+        right_curve_rad = line_right.curve_radius_meters()
+        return (left_curve_rad + right_curve_rad) / 2
+
+    @staticmethod
+    def lane_width_meters2(line_left : LaneLine, line_right : LaneLine):
         y = LaneImageSpec.height - 1
         left_x_meters = line_left.x_meters(y)
         right_x_meters = line_right.x_meters(y)
@@ -151,13 +158,13 @@ class FittedLane(object):
     def lane_width_meters(self):
         return FittedLane.lane_width_meters2(self.line_left, self.line_right)
 
-    def fit_adapt(self, img):
-        leftx_base, rightx_base = FittedLane._lines_left_right_x_bottom(img)
-        nonzerox, nonzeroy = FittedLane._lane_pixels_xy(img)
-        line_left = LaneLine.fit(nonzerox=nonzerox, nonzeroy=nonzeroy, x_base=leftx_base)
-        line_right = LaneLine.fit(nonzerox=nonzerox, nonzeroy=nonzeroy, x_base=rightx_base)
-        line_left.curve_radius_meters()
+    @staticmethod
+    def _are_lines_near_parallel(line_left : LaneLine, line_right : LaneLine):
+        radius_left = line_left.curve_radius_meters()
+        radius_right = line_right.curve_radius_meters()
+        return abs(radius_left - radius_right) / abs(radius_left) < 0.5
 
+    def _sanity_check_lines(self, line_left, line_right):
         line_detected = True
         if line_left is None:
             self.left_not_detected_count += 1
@@ -168,10 +175,27 @@ class FittedLane(object):
         if not line_detected:
             return
 
+        lines_ok = True
         lane_width = FittedLane.lane_width_meters2(line_left, line_right)
         if lane_width < LaneSpec.min_width_meters:
-            # lane not properly detected if too narrow
+            # lane not properly detected if lane lines are too narrow
             self.lane_width_too_narrow_count += 1
+            lines_ok = False
+
+        if FittedLane._are_lines_near_parallel(line_left, line_right):
+            self.lane_lines_not_parallel_count += 1
+            lines_ok = False
+
+        return lines_ok
+
+    def fit_adapt(self, img):
+        leftx_base, rightx_base = FittedLane._lines_left_right_x_bottom(img)
+        nonzerox, nonzeroy = FittedLane._lane_pixels_xy(img)
+        line_left = LaneLine.fit(nonzerox=nonzerox, nonzeroy=nonzeroy, x_base=leftx_base)
+        line_right = LaneLine.fit(nonzerox=nonzerox, nonzeroy=nonzeroy, x_base=rightx_base)
+        line_left.curve_radius_meters()
+
+        if not self._sanity_check_lines(line_left, line_right):
             return
 
         self.line_left = line_left
