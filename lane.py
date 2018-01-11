@@ -35,7 +35,7 @@ class FittedLane(object):
         right_curverad = (
                          (1 + (2 * right_fit_cr[0] * y_eval * FittedLane.ym_per_pix + right_fit_cr[1]) ** 2) ** 1.5) / np.absolute(
             2 * right_fit_cr[0])
-        return left_curverad, right_curverad
+        return (left_curverad + right_curverad) / 2
 
     @staticmethod
     def fit(img):
