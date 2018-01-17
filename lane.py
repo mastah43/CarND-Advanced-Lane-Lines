@@ -1,7 +1,12 @@
 import numpy as np
 import cv2
+import collections
+from functools import reduce
+import itertools
+
 
 class LaneSpec:
+    itertools.zip_longest
     min_width_meters = 3.7
 
 
@@ -13,9 +18,24 @@ class LaneImageSpec:
 
 
 class LaneLine(object):
-    def __init__(self, fit_pix, fit_meters):
-        self.fit_pix = fit_pix
-        self.fit_meters = fit_meters
+    def __init__(self):
+        self.fit_pix = None
+        self.fit_meters = None
+
+        frame_count_to_smooth_fits = 5
+        self.fit_pix_last = collections.deque([], frame_count_to_smooth_fits)
+        self.fit_meters_last = collections.deque([], frame_count_to_smooth_fits)
+
+        # was the line detected in the last iteration?
+        self.detected = False
+        # x values of the last n fits of the line
+        self.recent_xfitted = []
+        # average x values of the fitted line over the last n iterations
+        self.bestx = None
+        # x values for detected line pixels
+        self.allx = None
+        # y values for detected line pixels
+        self.ally = None
 
     def x_pixels(self, y_pixels):
         return self.fit_pix[0] * y_pixels ** 2 + self.fit_pix[1] * y_pixels + self.fit_pix[2]
@@ -29,8 +49,12 @@ class LaneLine(object):
         return ((1 + (2 * self.fit_meters[0] * y_eval * LaneImageSpec.ym_per_pix + self.fit_meters[1]) ** 2) ** 1.5) / np.absolute(
             2 * self.fit_meters[0])
 
-    @staticmethod
-    def fit(nonzerox, nonzeroy, x_base:int, out_img=None):
+    def smooth_fit(self, fit, fits_last):
+        fits_last.append(fit)
+        # TODO use last smoothed fit * 0.95 + 0.05 * current fit coefficients
+        return [sum(i)/float(len(i)) for i in zip(*fits_last)]
+
+    def fit(self, nonzerox, nonzeroy, x_base:int, out_img=None):
 
         # Choose the number of sliding windows
         nwindows = 9
@@ -46,14 +70,13 @@ class LaneLine(object):
         lane_inds = []
 
         # Step through the windows one by one
+        lane_window_center_x = []
         for window in range(nwindows):
             # Identify window boundaries in x and y (and right and left)
             win_y_low = LaneImageSpec.height - (window + 1) * window_height
             win_y_high = LaneImageSpec.width - window * window_height
             win_x_low = x_current - margin
             win_x_high = x_current + margin
-            win_xright_low = x_current - margin
-            win_xright_high = x_current + margin
 
             # Draw the windows on the visualization image
             if out_img is not None:
@@ -64,6 +87,8 @@ class LaneLine(object):
                 (nonzeroy >= win_y_low) & (nonzeroy < win_y_high) &
                 (nonzerox >= win_x_low) & (nonzerox < win_x_high)).nonzero()[0]
 
+            # TODO remove outliers from lane pixels
+
             # Append these indices to the lists
             lane_inds.append(window_inds)
 
@@ -71,12 +96,16 @@ class LaneLine(object):
             if len(window_inds) > minpix:
                 x_current = np.int(np.mean(nonzerox[window_inds]))
 
+            lane_window_center_x.append(x_current)
+
         # Concatenate the arrays of indices
         lane_inds = np.concatenate(lane_inds)
 
         # can not fit lane polynome if too few pixels were found
         if (len(lane_inds) < 2):
-            return None
+            return
+
+        self.last_lane_window_center_x = lane_window_center_x
 
         # Colorize the lane pixels
         # TODO
@@ -91,7 +120,27 @@ class LaneLine(object):
         fit_pix = np.polyfit(lefty, leftx, 2)
         fit_meters = np.polyfit(lefty * LaneImageSpec.ym_per_pix, leftx * LaneImageSpec.xm_per_pix, 2)
 
-        return LaneLine(fit_pix=fit_pix, fit_meters=fit_meters)
+        # TODO reject fit if coefficients are >5% away from previous fit, fallback?
+
+        if len(self.fit_pix_last) > 0:
+            fit_is_outlier = reduce((lambda x,y: x or y),
+                                    map((lambda x: abs((x[0] / x[1]) - 1) > 0.05), zip(fit_pix, self.fit_pix_last[-1])))
+            if fit_is_outlier:
+                return
+
+        # Smooth the fits over time
+        fit_pix_smoothed = self.smooth_fit(fit_pix, self.fit_pix_last)
+        fit_meters_smoothed = self.smooth_fit(fit_meters, self.fit_meters_last)
+
+        self.fit_pix = fit_pix_smoothed
+        self.fit_meters = fit_meters_smoothed
+
+
+    @staticmethod
+    def create_fit(nonzerox, nonzeroy, x_base, out_img):
+        line = LaneLine()
+        line.fit(nonzerox, nonzeroy, x_base, out_img)
+        return line
 
 
 class FittedLane(object):
@@ -100,28 +149,6 @@ class FittedLane(object):
         self.line_left = line_left
         self.line_right = line_right
         self.out_img = out_img
-
-        # was the line detected in the last iteration?
-        self.detected = False
-        # x values of the last n fits of the line
-        self.recent_xfitted = []
-        # average x values of the fitted line over the last n iterations
-        self.bestx = None
-        # polynomial coefficients averaged over the last n iterations
-        self.best_fit = None
-        # polynomial coefficients for the most recent fit
-        self.current_fit = [np.array([False])]
-        # radius of curvature of the line in some units
-        self.radius_of_curvature = None
-        # distance in meters of vehicle center from the line
-        self.line_base_pos = None
-        # difference in fit coefficients between last and new fits
-        self.diffs = np.array([0, 0, 0], dtype='float')
-        # x values for detected line pixels
-        self.allx = None
-        # y values for detected line pixels
-        self.ally = None
-
         self.left_not_detected_count = 0
         self.right_not_detected_count = 0
         self.lane_width_too_narrow_count = 0
@@ -191,17 +218,21 @@ class FittedLane(object):
         return lines_ok
 
     def fit_adapt(self, img):
+        # TODO allow debug output of histogram and also window based pixel finding
         leftx_base, rightx_base = FittedLane._lines_left_right_x_bottom(img)
         nonzerox, nonzeroy = FittedLane._lane_pixels_xy(img)
-        line_left = LaneLine.fit(nonzerox=nonzerox, nonzeroy=nonzeroy, x_base=leftx_base)
-        line_right = LaneLine.fit(nonzerox=nonzerox, nonzeroy=nonzeroy, x_base=rightx_base)
-        line_left.curve_radius_meters()
+        self.line_left.fit(nonzerox=nonzerox, nonzeroy=nonzeroy, x_base=leftx_base)
+        self.line_right.fit(nonzerox=nonzerox, nonzeroy=nonzeroy, x_base=rightx_base)
+        self.line_left.curve_radius_meters()
 
+        # TODO keep last line if not detected, keep last line if not parallel, etc.
+        """
         if not self._sanity_check_lines(line_left, line_right):
             return
 
         self.line_left = line_left
         self.line_right = line_right
+        """
 
     @staticmethod
     def _lines_left_right_x_bottom(img):
@@ -242,8 +273,9 @@ class FittedLane(object):
 
         leftx_base, rightx_base = FittedLane._lines_left_right_x_bottom(img)
         nonzerox, nonzeroy = FittedLane._lane_pixels_xy(img)
-        line_left = LaneLine.fit(nonzerox=nonzerox, nonzeroy=nonzeroy, x_base=leftx_base, out_img=out_img)
-        line_right = LaneLine.fit(nonzerox=nonzerox, nonzeroy=nonzeroy, x_base=rightx_base, out_img=out_img)
+
+        line_left = LaneLine.create_fit(nonzerox=nonzerox, nonzeroy=nonzeroy, x_base=leftx_base, out_img=out_img)
+        line_right = LaneLine.create_fit(nonzerox=nonzerox, nonzeroy=nonzeroy, x_base=rightx_base, out_img=out_img)
 
         return FittedLane(line_left, line_right, out_img)
 

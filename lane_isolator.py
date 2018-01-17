@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 
+
 class LaneIsolator(object):
 
     def __init__(self,
@@ -8,7 +9,19 @@ class LaneIsolator(object):
                  gradx_thresh=(20, 100),
                  grady_thresh=(20, 100),
                  mag_thresh=(20, 100),
-                 dir_thresh = (0, np.pi / 8)):
+                 dir_thresh = (0, np.pi / 8),
+                 trace_intermediate_image=(lambda label,img : None)):
+        """
+
+        :param ksize:
+        :param gradx_thresh:
+        :param grady_thresh:
+        :param mag_thresh:
+        :param dir_thresh:
+        :param trace_intermediate_image: For receiving intermediary images in lane isolation.
+            Expects function(label:str, image). The image given to this function by LaneIsolater
+            could be change after the call (passed by reference). Copy it if e.g. you want to plot it later.
+        """
         self.ksize = ksize
         self.gradx_thresh = gradx_thresh
         self.grady_thresh = grady_thresh
@@ -17,72 +30,91 @@ class LaneIsolator(object):
         self._sobelx = None
         self._sobely = None
         self._gray = None
+        self.trace_intermediate_image = trace_intermediate_image
 
-    def _abs_sobel_thresh(self, img, sobel, thresh_min=0, thresh_max=255):
-        gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    def _abs_sobel_thresh(self, sobel, thresh_min=0, thresh_max=255):
         abs_sobel = np.absolute(sobel)
         # Rescale back to 8 bit integer
         scaled_sobel = np.uint8(255 * abs_sobel / np.max(abs_sobel))
-        binary_output = np.zeros_like(scaled_sobel)  # TODO why create a copy?
-        binary_output[(scaled_sobel >= thresh_min) & (scaled_sobel <= thresh_max)] = 1
+        sobel_mask = np.zeros_like(scaled_sobel)  # TODO why create a copy?
+        sobel_mask[(scaled_sobel >= thresh_min) & (scaled_sobel <= thresh_max)] = 1
 
-        return binary_output
+        return sobel_mask
 
     # Define a function to return the magnitude of the gradient
     # for a given sobel kernel size and threshold values
-    def _mag_thresh(self, img, sobelx, sobely, mag_thresh=(0, 255)):
+    def _mag_thresh(self, sobelx, sobely, mag_thresh=(0, 255)):
         # Calculate the gradient magnitude
         gradmag = np.sqrt(sobelx ** 2 + sobely ** 2)
         # Rescale to 8 bit
         scale_factor = np.max(gradmag) / 255
         gradmag = (gradmag / scale_factor).astype(np.uint8)
         # Create a binary image of ones where threshold is met, zeros otherwise
-        binary_output = np.zeros_like(gradmag)
-        binary_output[(gradmag >= mag_thresh[0]) & (gradmag <= mag_thresh[1])] = 1
+        sobel_mag_mask = np.zeros_like(gradmag)
+        sobel_mag_mask[(gradmag >= mag_thresh[0]) & (gradmag <= mag_thresh[1])] = 1
 
-        # Return the binary image
-        return binary_output
+        return sobel_mag_mask
 
     # Define a function to threshold an image for a given range and Sobel kernel
-    def _dir_threshold(self, img, sobelx, sobely, thresh=(0, np.pi / 2)):
+    def _dir_threshold(self, sobelx, sobely, thresh=(0, np.pi / 2)):
         # Take the absolute value of the gradient direction,
         # apply a threshold, and create a binary image result
         absgraddir = np.arctan2(np.absolute(sobely), np.absolute(sobelx))
-        binary_output = np.zeros_like(absgraddir)
-        binary_output[(absgraddir >= thresh[0]) & (absgraddir <= thresh[1])] = 1
+        sobel_dir_mask = np.zeros_like(absgraddir)
+        sobel_dir_mask[(absgraddir >= thresh[0]) & (absgraddir <= thresh[1])] = 1
 
-        # Return the binary image
-        return binary_output
+        return sobel_dir_mask
 
     def _color_threshold(self, img, thresh = (90, 255)):
-        hls = cv2.cvtColor(img, cv2.COLOR_BGR2HLS)
-        H = hls[:, :, 0]
-        L = hls[:, :, 1]
-        S = hls[:, :, 2]
+        hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
 
-        binary = np.zeros_like(S)
-        binary[(S > thresh[0]) & (S <= thresh[1])] = 1
-        return binary
+        yellow_hsv_low = np.array([0, 100, 100])
+        yellow_hsv_high = np.array([50, 255, 255])
+
+        white_hsv_low = np.array([20, 0, 180])
+        white_hsv_high = np.array([255, 80, 255])
+
+        yellow_mask = cv2.inRange(hsv, yellow_hsv_low, yellow_hsv_high)
+        self.trace_intermediate_image('yellow color mask', yellow_mask)
+
+        white_mask = cv2.inRange(hsv, white_hsv_low, white_hsv_high)
+        self.trace_intermediate_image('white color mask', white_mask)
+
+        color_mask = cv2.bitwise_or(yellow_mask, white_mask)
+        return color_mask
 
     def isolate_lanes(self, img):
         self._gray = cv2.cvtColor(src=img, code=cv2.COLOR_RGB2GRAY, dst=self._gray)
+        self.trace_intermediate_image('converted to gray scale', self._gray)
         self._sobelx = cv2.Sobel(src=self._gray, ddepth=cv2.CV_64F, dx=1, dy=0, dst=self._sobelx, ksize=self.ksize)
+        self.trace_intermediate_image('sobel x', self._sobelx)
         self._sobely = cv2.Sobel(src=self._gray, ddepth=cv2.CV_64F, dx=0, dy=1, dst=self._sobely, ksize=self.ksize)
+        self.trace_intermediate_image('sobel y', self._sobely)
 
-        """ TODO needed?
         gradx = self._abs_sobel_thresh(
-            img=img, orient='x', sobel=self._sobelx,
-            thresh_min=self.gradx_thresh[0], thresh_max=self.gradx_thresh[1])
+            sobel=self._sobelx, thresh_min=self.gradx_thresh[0], thresh_max=self.gradx_thresh[1])
+        self.trace_intermediate_image('gradx', gradx)
+
         grady = self._abs_sobel_thresh(
-            img=img, orient='y', sobel=self._sobely,
-            thresh_min=self.grady_thresh[0], thresh_max=self.grady_thresh[1])
-            """
-        mag_binary = self._mag_thresh(img, sobelx=self._sobelx, sobely=self._sobely, mag_thresh=self.mag_thresh)
-        dir_binary = self._dir_threshold(img, sobelx=self._sobelx, sobely=self._sobely, thresh=self.dir_thresh)
+            sobel=self._sobely, thresh_min=self.grady_thresh[0], thresh_max=self.grady_thresh[1])
+        self.trace_intermediate_image('grady', grady)
+
+        mag_binary = self._mag_thresh(sobelx=self._sobelx, sobely=self._sobely, mag_thresh=self.mag_thresh)
+        self.trace_intermediate_image('magnitude', mag_binary)
+
+        # TODO TODO direction of sobel is wrong - invert it (horicontal to 45 degree is needed)
+        dir_binary = self._dir_threshold(sobelx=self._sobelx, sobely=self._sobely, thresh=self.dir_thresh)
+        self.trace_intermediate_image('direction', dir_binary)
+
         color_binary = self._color_threshold(img, thresh = (90, 255))
+        self.trace_intermediate_image('color mask', color_binary)
 
         # TODO allow debug output of images
 
         lanes = np.zeros_like(dir_binary)
-        lanes[(dir_binary == 1) & (mag_binary == 1) & (color_binary == 1)] = 1
-        return lanes
+        # TODO lanes[(dir_binary == 1) & (mag_binary == 1) & (color_binary == 1)] = 1
+        lanes[(color_binary == 1)] = 1
+        self.trace_intermediate_image('lanes', lanes)
+
+        # TODO return lanes
+        return color_binary

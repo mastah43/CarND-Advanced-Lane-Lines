@@ -3,6 +3,7 @@ import cv2
 from lane import FittedLane
 
 
+# TODO remove lane smoother but only directly use a single FittedLane instance
 class LaneSmoother(object):
 
     def __init__(self):

@@ -44,13 +44,14 @@ def chessboard():
     img_birdview = img_transformer.to_birdview(img_binary)
     #plot_images(img_undistorted, img_birdview)
 
+
+
     # TODO detect lane lines
     histogram = np.sum(img_birdview[img_birdview.shape[0] // 2:, :], axis=0)
     #plt.plot(histogram)
     #plt.show(block=True)
 
     # TODO fit polynomial
-
 
 if __name__ == '__main__':
     chessboard()

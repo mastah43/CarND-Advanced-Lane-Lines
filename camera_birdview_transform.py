@@ -28,7 +28,6 @@ class CameraImagePerspectiveTransform(object):
              [(img_size[0] * 3 / 4), img_size[1]],
              [(img_size[0] * 3 / 4), 0]])
         self.m = cv2.getPerspectiveTransform(src, dst)
-        ret, self.m_inv = cv2.invert(self.m)
 
     def to_birdview(self, img):
         """
@@ -37,7 +36,7 @@ class CameraImagePerspectiveTransform(object):
         :return:
         """
         img_size = (img.shape[1], img.shape[0])
-        return cv2.warpPerspective(img, self.m, img_size)
+        return cv2.warpPerspective(img, self.m, img_size, flags=cv2.INTER_LINEAR)
 
     def birdview_to_camera(self, img):
         """
@@ -46,4 +45,4 @@ class CameraImagePerspectiveTransform(object):
         :return:
         """
         img_size = (img.shape[1], img.shape[0])
-        return cv2.warpPerspective(img, self.m_inv, img_size)
+        return cv2.warpPerspective(img, self.m, img_size, flags=cv2.INTER_LINEAR|cv2.WARP_INVERSE_MAP)
