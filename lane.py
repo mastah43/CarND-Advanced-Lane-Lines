@@ -50,9 +50,16 @@ class LaneLine(object):
             2 * self.fit_meters[0])
 
     def smooth_fit(self, fit, fits_last):
+
         fits_last.append(fit)
-        # TODO use last smoothed fit * 0.95 + 0.05 * current fit coefficients
-        return [sum(i)/float(len(i)) for i in zip(*fits_last)]
+
+        if len(fits_last) >= 2:
+            coeff_last = fits_last[-2]
+            coeff_new = fits_last[-1]
+            coeff_new_weight = 0.05
+            return [(coeff[0]*(1-coeff_new_weight) + coeff[1]*coeff_new_weight) for coeff in zip(coeff_last, coeff_new)]
+        else:
+            return fit
 
     def fit(self, nonzerox, nonzeroy, x_base:int, out_img=None):
 
@@ -122,6 +129,7 @@ class LaneLine(object):
 
         # TODO reject fit if coefficients are >5% away from previous fit, fallback?
 
+        """ TODO """
         if len(self.fit_pix_last) > 0:
             fit_is_outlier = reduce((lambda x,y: x or y),
                                     map((lambda x: abs((x[0] / x[1]) - 1) > 0.05), zip(fit_pix, self.fit_pix_last[-1])))
@@ -223,7 +231,6 @@ class FittedLane(object):
         nonzerox, nonzeroy = FittedLane._lane_pixels_xy(img)
         self.line_left.fit(nonzerox=nonzerox, nonzeroy=nonzeroy, x_base=leftx_base)
         self.line_right.fit(nonzerox=nonzerox, nonzeroy=nonzeroy, x_base=rightx_base)
-        self.line_left.curve_radius_meters()
 
         # TODO keep last line if not detected, keep last line if not parallel, etc.
         """

@@ -1,58 +1,35 @@
-import numpy as np
-import cv2
-import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
-from matplotlib.colors import ListedColormap
+from moviepy.editor import VideoFileClip
 from camera_img_undistorter import CameraImageUndistorter
 from camera_birdview_transform import CameraImagePerspectiveTransform
 from lane_isolator import LaneIsolator
+from lane_smoother import LaneSmoother
+from lane import FittedLane
+from lane_image_augmentation import LaneImageAugmenter
 
 
-def plot_images(img_src, img_dst):
-    f, (ax1, ax2) = plt.subplots(1, 2, figsize=(24, 9))
-    f.tight_layout()
-    ax1.imshow(img_src)
-    ax1.set_title('Source Image', fontsize=50)
-    ax2.imshow(img_dst, cmap='gray')
-    ax2.set_title('Destination Image', fontsize=50)
-    ax2.imshow(img_dst, cmap='gray')
-    plt.subplots_adjust(left=0., right=1, top=0.9, bottom=0.)
-    plt.show(block=True)
-
-
-def chessboard():
+def write_lane_augmentation_video(src_video_file:str, dst_video_file:str):
     img_transformer = CameraImagePerspectiveTransform()
     img_undistorter = CameraImageUndistorter()
     lane_isolator = LaneIsolator()
+    lane_img_augmenter = LaneImageAugmenter(img_transformer)
+    lane_smoother = LaneSmoother()
 
-    img = cv2.cvtColor(cv2.imread('./test_images/straight_lines1.jpg'), cv2.COLOR_BGR2RGB)
-    img_undistorted = img_undistorter.undistort(img)
+    clip = VideoFileClip(src_video_file)
 
-    #plot_images(img, img_unwarped)
+    def process_image(img):
+        img_undistorted = img_undistorter.undistort(img)
+        img_binary = lane_isolator.isolate_lanes(img_undistorted)
+        img_binary_birdview = img_transformer.to_birdview(img_binary)
+        lane = lane_smoother.fit(img_binary_birdview)
+        return lane_img_augmenter.draw_all(img_undistorted, lane)
 
-    img_binary = lane_isolator.isolate_lanes(img_undistorted)
-    plot_images(img_undistorted, img_binary)
+    #clip_cut = clip.set_start(0).set_end(50)
+    clip_cut = clip.subclip(19, 24)
+    clip_augmented = clip_cut.fl_image(process_image)
+    clip_augmented.write_videofile(dst_video_file, audio=False, progress_bar=True)
 
-    # TODO use magnitude of gradient
-    # TODO use direction of gradient
-    # TODO filter interesting colors
-
-    hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
-    s_channel = hls[:, :, 2]
-    # TODO filter area where lanes can be
-
-    img_birdview = img_transformer.to_birdview(img_binary)
-    #plot_images(img_undistorted, img_birdview)
-
-
-
-    # TODO detect lane lines
-    histogram = np.sum(img_birdview[img_birdview.shape[0] // 2:, :], axis=0)
-    #plt.plot(histogram)
-    #plt.show(block=True)
-
-    # TODO fit polynomial
 
 if __name__ == '__main__':
-    chessboard()
+    write_lane_augmentation_video('project_video.mp4', 'project_video_result_critical.mp4')
+    # TODO write_lane_augmentation_video('harder_challenge_video.mp4', 'harder_challenge_video_result.mp4')
 
