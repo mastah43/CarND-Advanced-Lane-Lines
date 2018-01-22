@@ -20,7 +20,7 @@ class CameraImageUndistorter(object):
         img_shape = None
 
         obj_points_single = np.zeros((self.nx * self.ny, 3), np.float32)
-        obj_points_single[:, :2] = np.mgrid[0:self.nx, 0:self.ny].T.reshape(-1, 2)  # TODO explain
+        obj_points_single[:, :2] = np.mgrid[0:self.nx, 0:self.ny].T.reshape(-1, 2)
 
         image_files = glob.glob('./camera_cal/calibration*.jpg')
         for img_file in image_files:

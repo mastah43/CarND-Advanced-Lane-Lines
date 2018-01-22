@@ -30,6 +30,7 @@ def write_lane_augmentation_video(src_video_file:str, dst_video_file:str):
 
 
 if __name__ == '__main__':
-    write_lane_augmentation_video('project_video.mp4', 'project_video_result_critical.mp4')
-    # TODO write_lane_augmentation_video('harder_challenge_video.mp4', 'harder_challenge_video_result.mp4')
+    #write_lane_augmentation_video('project_video.mp4', 'project_video_result_critical.mp4')
+    write_lane_augmentation_video('challenge_video.mp4', 'challenge_video_result.mp4')
+    write_lane_augmentation_video('harder_challenge_video.mp4', 'harder_challenge_video_result.mp4')
 

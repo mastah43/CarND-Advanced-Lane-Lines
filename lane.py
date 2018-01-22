@@ -106,7 +106,7 @@ class LaneLine(object):
                 (nonzeroy >= win_y_low) & (nonzeroy < win_y_high) &
                 (nonzerox >= win_x_low) & (nonzerox < win_x_high)).nonzero()[0]
 
-            # TODO remove outliers from lane pixels
+            # TODO idea: remove outliers from lane pixels
 
             # Append these indices to the lists
             lane_inds.append(window_inds)
@@ -126,8 +126,7 @@ class LaneLine(object):
 
         self.last_lane_window_center_x = lane_window_center_x
 
-        # Colorize the lane pixels
-        # TODO
+        # TODO: Colorize the lane pixels
         # out_img[nonzeroy[left_lane_inds], nonzerox[left_lane_inds]] = [255, 0, 0]
         # out_img[nonzeroy[right_lane_inds], nonzerox[right_lane_inds]] = [0, 0, 255]
 
@@ -139,8 +138,7 @@ class LaneLine(object):
         fit_pix = np.polyfit(lefty, leftx, 2)
         fit_meters = np.polyfit(lefty * LaneImageSpec.ym_per_pix, leftx * LaneImageSpec.xm_per_pix, 2)
 
-        # TODO reject fit if coefficients are >5% away from previous fit, fallback?
-
+        # Reject fit if two far away from last fit but recover after several frames
         if (self.fits_rejected < 10) and \
                 (len(self.fit_pix_last) > 0) and (LaneLine.is_fit_outlier(fit_pix, self.fit_pix_last[-1])):
             self.fits_rejected += 1

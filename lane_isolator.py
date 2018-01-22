@@ -36,7 +36,7 @@ class LaneIsolator(object):
         abs_sobel = np.absolute(sobel)
         # Rescale back to 8 bit integer
         scaled_sobel = np.uint8(255 * abs_sobel / np.max(abs_sobel))
-        sobel_mask = np.zeros_like(scaled_sobel)  # TODO why create a copy?
+        sobel_mask = np.zeros_like(scaled_sobel)  # TODO do not create copy
         sobel_mask[(scaled_sobel >= thresh_min) & (scaled_sobel <= thresh_max)] = 1
 
         return sobel_mask
@@ -102,14 +102,12 @@ class LaneIsolator(object):
         mag_binary = self._mag_thresh(sobelx=self._sobelx, sobely=self._sobely, mag_thresh=self.mag_thresh)
         self.trace_intermediate_image('magnitude', mag_binary)
 
-        # TODO TODO direction of sobel is wrong - invert it (horicontal to 45 degree is needed)
+        # TODO direction of sobel is wrong - invert it (horicontal to 45 degree is needed)
         dir_binary = self._dir_threshold(sobelx=self._sobelx, sobely=self._sobely, thresh=self.dir_thresh)
         self.trace_intermediate_image('direction', dir_binary)
 
         color_binary = self._color_threshold(img, thresh = (90, 255))
         self.trace_intermediate_image('color mask', color_binary)
-
-        # TODO allow debug output of images
 
         lanes = np.zeros_like(dir_binary)
         # TODO lanes[(dir_binary == 1) & (mag_binary == 1) & (color_binary == 1)] = 1
