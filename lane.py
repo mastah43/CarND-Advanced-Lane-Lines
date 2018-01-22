@@ -37,8 +37,13 @@ class LaneLine(object):
         # y values for detected line pixels
         self.ally = None
 
+        self.fits_rejected = 0
+
+    def x_for_fit(fit, y_pixels):
+        return fit[0] * y_pixels ** 2 + fit[1] * y_pixels + fit[2]
+
     def x_pixels(self, y_pixels):
-        return self.fit_pix[0] * y_pixels ** 2 + self.fit_pix[1] * y_pixels + self.fit_pix[2]
+        return LaneLine.x_for_fit(self.fit_pix, y_pixels)
 
     def x_meters(self, y_pixels):
         y_meters = y_pixels * LaneImageSpec.ym_per_pix
@@ -63,8 +68,10 @@ class LaneLine(object):
 
     @staticmethod
     def is_fit_outlier(fit, fit_last):
-        return reduce((lambda x, y: x or y),
-                      map((lambda x: abs((x[0] / x[1]) - 1) > 0.20), zip(fit, fit_last)))
+        y_pixels = np.linspace(0, LaneImageSpec.height - 1, 10)
+        return reduce((lambda a, b: a or b),
+                      map((lambda y: abs((LaneLine.x_for_fit(fit, y) / LaneLine.x_for_fit(fit_last, y)) - 1) > 0.05),
+                          y_pixels))
 
     def fit(self, nonzerox, nonzeroy, x_base:int, out_img=None):
 
@@ -134,9 +141,13 @@ class LaneLine(object):
 
         # TODO reject fit if coefficients are >5% away from previous fit, fallback?
 
-        """ TODO """
-        if (len(self.fit_pix_last) > 0) and (LaneLine.is_fit_outlier(fit_pix, self.fit_pix_last[-1])):
+        if (self.fits_rejected < 10) and \
+                (len(self.fit_pix_last) > 0) and (LaneLine.is_fit_outlier(fit_pix, self.fit_pix_last[-1])):
+            self.fits_rejected += 1
+            # new lane detection is an too far away from last detection so it is ignored
             return
+        else:
+            self.fits_rejected = 0
 
 
         # Smooth the fits over time
