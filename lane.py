@@ -61,6 +61,11 @@ class LaneLine(object):
         else:
             return fit
 
+    @staticmethod
+    def is_fit_outlier(fit, fit_last):
+        return reduce((lambda x, y: x or y),
+                      map((lambda x: abs((x[0] / x[1]) - 1) > 0.20), zip(fit, fit_last)))
+
     def fit(self, nonzerox, nonzeroy, x_base:int, out_img=None):
 
         # Choose the number of sliding windows
@@ -130,11 +135,9 @@ class LaneLine(object):
         # TODO reject fit if coefficients are >5% away from previous fit, fallback?
 
         """ TODO """
-        if len(self.fit_pix_last) > 0:
-            fit_is_outlier = reduce((lambda x,y: x or y),
-                                    map((lambda x: abs((x[0] / x[1]) - 1) > 0.05), zip(fit_pix, self.fit_pix_last[-1])))
-            if fit_is_outlier:
-                return
+        if (len(self.fit_pix_last) > 0) and (LaneLine.is_fit_outlier(fit_pix, self.fit_pix_last[-1])):
+            return
+
 
         # Smooth the fits over time
         fit_pix_smoothed = self.smooth_fit(fit_pix, self.fit_pix_last)
