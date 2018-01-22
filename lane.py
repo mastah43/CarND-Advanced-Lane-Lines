@@ -25,18 +25,7 @@ class LaneLine(object):
         frame_count_to_smooth_fits = 5
         self.fit_pix_last = collections.deque([], frame_count_to_smooth_fits)
         self.fit_meters_last = collections.deque([], frame_count_to_smooth_fits)
-
-        # was the line detected in the last iteration?
-        self.detected = False
-        # x values of the last n fits of the line
-        self.recent_xfitted = []
-        # average x values of the fitted line over the last n iterations
-        self.bestx = None
-        # x values for detected line pixels
-        self.allx = None
-        # y values for detected line pixels
-        self.ally = None
-
+        self.fit_outlier_count = 0
         self.fits_rejected = 0
 
     def x_for_fit(fit, y_pixels):
@@ -68,6 +57,9 @@ class LaneLine(object):
 
     @staticmethod
     def is_fit_outlier(fit, fit_last):
+
+        # TODO check that slope of line is consistent (e.g. only one curve in it) otherwise reject
+
         y_pixels = np.linspace(0, LaneImageSpec.height - 1, 10)
         return reduce((lambda a, b: a or b),
                       map((lambda y: abs((LaneLine.x_for_fit(fit, y) / LaneLine.x_for_fit(fit_last, y)) - 1) > 0.05),
@@ -138,15 +130,15 @@ class LaneLine(object):
         fit_pix = np.polyfit(lefty, leftx, 2)
         fit_meters = np.polyfit(lefty * LaneImageSpec.ym_per_pix, leftx * LaneImageSpec.xm_per_pix, 2)
 
-        # Reject fit if two far away from last fit but recover after several frames
+        # Reject fit if too far away from last fit but recover after several frames
         if (self.fits_rejected < 10) and \
                 (len(self.fit_pix_last) > 0) and (LaneLine.is_fit_outlier(fit_pix, self.fit_pix_last[-1])):
+            self.fit_outlier_count += 1
             self.fits_rejected += 1
             # new lane detection is an too far away from last detection so it is ignored
             return
         else:
             self.fits_rejected = 0
-
 
         # Smooth the fits over time
         fit_pix_smoothed = self.smooth_fit(fit_pix, self.fit_pix_last)
@@ -169,8 +161,6 @@ class FittedLane(object):
         self.line_left = line_left
         self.line_right = line_right
         self.out_img = out_img
-        self.left_not_detected_count = 0
-        self.right_not_detected_count = 0
         self.lane_width_too_narrow_count = 0
         self.lane_lines_not_parallel_count = 0
 
@@ -212,16 +202,6 @@ class FittedLane(object):
         return abs(radius_left - radius_right) / abs(radius_left) < 0.5
 
     def _sanity_check_lines(self, line_left, line_right):
-        line_detected = True
-        if line_left is None:
-            self.left_not_detected_count += 1
-            line_detected = False
-        if line_right is None:
-            self.right_not_detected_count += 1
-            line_detected = False
-        if not line_detected:
-            return
-
         lines_ok = True
         lane_width = FittedLane.lane_width_meters2(line_left, line_right)
         if lane_width < LaneSpec.min_width_meters:
@@ -233,8 +213,6 @@ class FittedLane(object):
             self.lane_lines_not_parallel_count += 1
             lines_ok = False
 
-        # TODO check that slope of line is consistent (e.g. only one curve in it)
-
         return lines_ok
 
     def fit_adapt(self, img):
@@ -245,13 +223,9 @@ class FittedLane(object):
         self.line_right.fit(nonzerox=nonzerox, nonzeroy=nonzeroy, x_base=rightx_base)
 
         # TODO keep last line if not detected, keep last line if not parallel, etc.
-        """
-        if not self._sanity_check_lines(line_left, line_right):
+        if not self._sanity_check_lines(self.line_left, self.line_right):
+            # TODO revert left and right lane to previous state
             return
-
-        self.line_left = line_left
-        self.line_right = line_right
-        """
 
     @staticmethod
     def _lines_left_right_x_bottom(img):

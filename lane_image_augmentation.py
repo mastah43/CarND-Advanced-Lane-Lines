@@ -16,8 +16,8 @@ class LaneImageAugmenter(object):
         deviation_str = "deviation: {0:.3f}m".format(lane.deviation_from_lane_center_meters())
         lane_width_str = "width: {0:.2f}m".format(lane.lane_width_meters())
         lane_width_str = "width: {0:.2f}m".format(lane.lane_width_meters())
-        left_not_detected_str = "left not detected: {0}".format(lane.left_not_detected_count)
-        right_not_detected_str = "right not detected: {0}".format(lane.right_not_detected_count)
+        left_not_detected_str = "left not detected: {0}".format(lane.line_left.fit_outlier_count)
+        right_not_detected_str = "right not detected: {0}".format(lane.line_right.fit_outlier_count)
         width_too_narrow_str = "width too narrow: {0}".format(lane.lane_width_too_narrow_count)
         lines_not_parallel_str = "lines not parallel: {0}".format(lane.lane_lines_not_parallel_count)
 
