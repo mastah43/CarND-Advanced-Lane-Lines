@@ -85,7 +85,7 @@ class LaneLine(object):
         for window in range(nwindows):
             # Identify window boundaries in x and y (and right and left)
             win_y_low = LaneImageSpec.height - (window + 1) * window_height
-            win_y_high = LaneImageSpec.width - window * window_height
+            win_y_high = LaneImageSpec.height - window * window_height
             win_x_low = x_current - margin
             win_x_high = x_current + margin
 

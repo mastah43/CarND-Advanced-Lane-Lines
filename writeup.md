@@ -23,7 +23,7 @@ TODO
 [image-transform-source]: ./output_images/straight_lines1_source.jpg
 [image-transform-result]: ./output_images/straight_lines1_source.jpg
 [image-lane-mask-birdview]: ./output_images/lane_mask_birdview.jpg
-[image-lane-git]: ./output_images/lane_fit.jpg
+[image-lane-fit]: ./output_images/lane_fit.jpg
 [image-augmented]: ./output_images/augmented_image.jpg
 [video-result]: ./project_video_result.mp4 "Video"
 
@@ -66,9 +66,9 @@ A sample result for the distortion correction on a frame from the project video:
 
 #### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
 
-The class LaneIsolator in lane_isolator.py implements producing a binary mask image containing the lane pixels.
+The class LaneIsolator in lane_isolator.py implements producing a binary mask image containing the potential lane pixels.
 I used only a filter for white and yellow color.
-TODO
+TODO trial and error of different combinations and color thresholds
 
 ![alt text][image-lase-mask]
 
@@ -87,32 +87,64 @@ of the straight line image shows parallel lane lines:
 
 #### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
 
-Then I did some other stuff and fit my lane lines with a 2nd order polynomial kinda like this:
+The classes FittedLane and LaneLine in lane.py implement finding lane pixels and fitting a second order polynomial.
+In function LaneLine.fit(...) a sliding window approach is implemented to determine the lane pixels.
+The x position for the base of a lane line are determined using a histogram on the potential lane pixels.
+The x position of the highest left peak is used as base x position for the left lane. 
+Analogue the right peak for the right lane line. 
+In a window with pixel width 200 and height of image height divided by 9 (number of windows) all potential lane pixels 
+are considered lane pixels. If enough lane pixels are found the new center x position of the next window is realigned
+using the mean x position of the found lane pixels.
+Once all lane pixels have been found, the polynomial is fit to them.
 
-![alt text][image5]
+![alt text][image-lane-fit]
 
 #### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
 
-I did this in lines # through # in my code in `my_other_file.py`
+The curvature radius is computed by LaneLine.lane_radius_meters(). 
+It takes the average of the curvature radius of left and right lane line via LaneLine.curve_radius_meters().
+The curvature radius calculation of a lane line uses the second order polynomial fit in meters.
+I implemented the formula explained here](http://www.intmath.com/applications-differentiation/8-radius-curvature.php).
+I am using the pixel to meters factors for the birdview image from class LaneImageSpec in lane.py.
+
+The deviation from lane center is computed by FittedLane.deviation_from_lane_center_meters().
+The x pixel position of left and lane line is determined using the fit polynomial of the lane lines.
+Then the center of the lane is determine as the middle between left and right lane line.
+The pixel deviation is derived using pixel lane center x and image width divided by 2 for the camera center x position.
+The pixel deviation is then transformed to meters.
 
 #### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 
-I implemented this step in lines # through # in my code in `yet_another_file.py` in the function `map_lane()`.  Here is an example of my result on a test image:
+Implementation of result plotting is done in class LaneImageAugmenter in file lane_image_augmentation.py.
+I also include the potential lane pixels in the upper right corner and the windows used for finding lane pixels 
+in the lower right corner.
+Example for a frame in the video:
 
-![alt text][image6]
+![alt text][image-augmented]
 
 ---
 
 ### Pipeline (video)
 
-#### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
+#### 1. Provide a link to your final video output.  
 
-Here's a [link to my video result](./project_video.mp4)
+For the video pipeline I am smoothing the coefficients of the lane line polynomial (see LaneLine.smooth_fit).
+Also I am rejecting a fit polynomial if x positions are more then 5% away from last polynomial 
+(see LaneLine.is_fit_outlier).
+If there are more then 10 rejected fits in a row then the next fit is accepted to recover. 
+Here's a [link to my video result](./project_video_result.mp4)
 
 ---
 
 ### Discussion
 
-#### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
+#### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  
+
+TODO Where will your pipeline likely fail?  What could you do to make it more robust?
 
 Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
+
+TBD remove pixel outliers in lane pixel fitting
+TBD use history of window positions for new window positions
+TBD reject inparallel lane lines and lane lines with width smaller than expected (3.7 m)
+TBD tune lane pixel identification using sobel thresholds

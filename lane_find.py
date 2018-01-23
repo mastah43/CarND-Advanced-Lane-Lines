@@ -28,7 +28,7 @@ def write_lane_augmentation_video(src_video_file:str, dst_video_file:str):
 
     def process_image(img):
         frame_to_write[0] -= 1
-        write_images = frame_to_write[0] == 0
+        write_images = False # frame_to_write[0] == 0
 
         img_undistorted = img_undistorter.undistort(img)
         if write_images:
