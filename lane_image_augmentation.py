@@ -8,8 +8,12 @@ class LaneImageAugmenter(object):
     def __init__(self, img_transformer:CameraImagePerspectiveTransform):
         self.img_transformer:CameraImagePerspectiveTransform = img_transformer
 
-    def draw_all(self, dst, lane:FittedLane):
-        return self.draw_lanes(dst, lane)
+    def draw_all(self, dst, lane:FittedLane, imgs_steps=None):
+        return self.draw_lanes(dst, lane, imgs_steps)
+
+    def draw_images_steps(self, img_result, imgs_steps):
+        # TODO use function
+        pass
 
     def draw_statistics(self, dst, lane:FittedLane):
         radius_str = "radius: {0:.0f} m".format(lane.lane_radius_meters())
@@ -29,7 +33,7 @@ class LaneImageAugmenter(object):
         cv2.putText(dst, width_too_narrow_str, (700, 200), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
         cv2.putText(dst, lines_not_parallel_str, (700, 250), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
 
-    def draw_lanes(self, dst, lane:FittedLane):
+    def draw_lanes(self, dst, lane:FittedLane, imgs_steps=None):
         # TODO option to specify destination image
 
         # Create an image to draw the lines on
@@ -57,5 +61,30 @@ class LaneImageAugmenter(object):
         self.draw_statistics(newwarp, lane)
 
         # Combine the result with the original image
-        result = cv2.addWeighted(dst, 1, newwarp, 0.3, 0)
+        img_merge = cv2.addWeighted(dst, 1, newwarp, 0.3, 0)
+
+        if imgs_steps is not None:
+            img_full_height = img_merge.shape[0]
+            img_full_width = img_merge.shape[1]
+            img_step_height = int(img_full_height / len(imgs_steps))
+            img_step_width = 256
+            img_lanes_width = img_full_width - img_step_width
+            result = np.zeros((img_full_height, img_full_width, 3), dtype=np.uint8)
+            result[0:img_full_height, 0:img_full_width, :] = cv2.resize(img_merge, (img_full_width, img_full_height))
+
+            # show mask for lane pixels
+            # TODO
+            y_top_img_step = 0
+            for img_step in imgs_steps:
+                if (len(img_step.shape) == 2) or (img_step.shape[2] == 1):
+                    result[y_top_img_step:y_top_img_step+img_step_height, img_lanes_width:img_lanes_width+img_step_width, 0] = \
+                        cv2.resize(img_step, (img_step_width, img_step_height))
+                else:
+                    result[y_top_img_step:y_top_img_step + img_step_height,
+                    img_lanes_width:img_lanes_width + img_step_width] = \
+                        cv2.resize(img_step, (img_step_width, img_step_height))
+                y_top_img_step += img_step_height
+        else:
+            result = img_merge
+
         return result

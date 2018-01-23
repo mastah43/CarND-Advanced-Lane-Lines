@@ -5,6 +5,7 @@ from lane_isolator import LaneIsolator
 from lane_smoother import LaneSmoother
 from lane import FittedLane
 from lane_image_augmentation import LaneImageAugmenter
+import numpy as np
 
 
 def write_lane_augmentation_video(src_video_file:str, dst_video_file:str):
@@ -20,8 +21,9 @@ def write_lane_augmentation_video(src_video_file:str, dst_video_file:str):
         img_undistorted = img_undistorter.undistort(img)
         img_binary = lane_isolator.isolate_lanes(img_undistorted)
         img_binary_birdview = img_transformer.to_birdview(img_binary)
-        lane = lane_smoother.fit(img_binary_birdview)
-        return lane_img_augmenter.draw_all(img_undistorted, lane)
+        fit_trace_img = np.zeros_like(img_undistorted) # TODO reuse an image and zero it
+        lane = lane_smoother.fit(img_binary_birdview, fit_trace_img)
+        return lane_img_augmenter.draw_all(img_undistorted, lane, [img_binary, fit_trace_img])
 
     #clip_cut = clip
     clip_cut = clip.subclip(19, 24)
@@ -30,7 +32,7 @@ def write_lane_augmentation_video(src_video_file:str, dst_video_file:str):
 
 
 if __name__ == '__main__':
-    write_lane_augmentation_video('project_video.mp4', 'project_video_result_critical.mp4')
+    write_lane_augmentation_video('project_video.mp4', 'project_video_result.mp4')
     #write_lane_augmentation_video('challenge_video.mp4', 'challenge_video_result.mp4')
     #write_lane_augmentation_video('harder_challenge_video.mp4', 'harder_challenge_video_result.mp4')
 

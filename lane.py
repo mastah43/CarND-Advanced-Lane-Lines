@@ -65,7 +65,7 @@ class LaneLine(object):
                       map((lambda y: abs((LaneLine.x_for_fit(fit, y) / LaneLine.x_for_fit(fit_last, y)) - 1) > 0.05),
                           y_pixels))
 
-    def fit(self, nonzerox, nonzeroy, x_base:int, out_img=None):
+    def fit(self, nonzerox, nonzeroy, x_base:int, trace_img=None):
 
         # Choose the number of sliding windows
         nwindows = 9
@@ -90,8 +90,8 @@ class LaneLine(object):
             win_x_high = x_current + margin
 
             # Draw the windows on the visualization image
-            if out_img is not None:
-                cv2.rectangle(out_img, (win_x_low, win_y_low), (win_x_high, win_y_high), (0, 255, 0), 2)
+            if trace_img is not None:
+                cv2.rectangle(trace_img, (win_x_low, win_y_low), (win_x_high, win_y_high), (0, 255, 0), 2)
 
             # Identify the nonzero pixels in x and y within the window
             window_inds = (
@@ -118,9 +118,9 @@ class LaneLine(object):
 
         self.last_lane_window_center_x = lane_window_center_x
 
-        # TODO: Colorize the lane pixels
-        # out_img[nonzeroy[left_lane_inds], nonzerox[left_lane_inds]] = [255, 0, 0]
-        # out_img[nonzeroy[right_lane_inds], nonzerox[right_lane_inds]] = [0, 0, 255]
+        # Trace: colorize the lane pixels
+        if trace_img is not None:
+            trace_img[nonzeroy[lane_inds], nonzerox[lane_inds]] = [255, 0, 0]
 
         # Extract left and right line pixel positions
         leftx = nonzerox[lane_inds]
@@ -149,18 +149,17 @@ class LaneLine(object):
 
 
     @staticmethod
-    def create_fit(nonzerox, nonzeroy, x_base, out_img):
+    def create_fit(nonzerox, nonzeroy, x_base, trace_img=None):
         line = LaneLine()
-        line.fit(nonzerox, nonzeroy, x_base, out_img)
+        line.fit(nonzerox, nonzeroy, x_base, trace_img)
         return line
 
 
 class FittedLane(object):
 
-    def __init__(self, line_left:LaneLine, line_right:LaneLine, out_img):
+    def __init__(self, line_left:LaneLine, line_right:LaneLine):
         self.line_left = line_left
         self.line_right = line_right
-        self.out_img = out_img
         self.lane_width_too_narrow_count = 0
         self.lane_lines_not_parallel_count = 0
 
@@ -169,7 +168,7 @@ class FittedLane(object):
         left_x = self.line_left.x_pixels(y)
         right_x = self.line_right.x_pixels(y)
         camera_x = (right_x - left_x) / 2 + left_x
-        center_x = self.out_img.shape[1] / 2
+        center_x = LaneImageSpec.width / 2
         deviation_x = camera_x - center_x
         deviation_meters = deviation_x * LaneImageSpec.xm_per_pix
         return deviation_meters
@@ -199,7 +198,7 @@ class FittedLane(object):
     def _are_lines_near_parallel(line_left : LaneLine, line_right : LaneLine):
         radius_left = line_left.curve_radius_meters()
         radius_right = line_right.curve_radius_meters()
-        return abs(radius_left - radius_right) / abs(radius_left) < 0.5
+        return abs(float(radius_left)/float(radius_right)) - 1 < 0.1
 
     def _sanity_check_lines(self, line_left, line_right):
         lines_ok = True
@@ -215,12 +214,12 @@ class FittedLane(object):
 
         return lines_ok
 
-    def fit_adapt(self, img):
+    def fit_adapt(self, img, trace_img=None):
         # TODO allow debug output of histogram and also window based pixel finding
         leftx_base, rightx_base = FittedLane._lines_left_right_x_bottom(img)
         nonzerox, nonzeroy = FittedLane._lane_pixels_xy(img)
-        self.line_left.fit(nonzerox=nonzerox, nonzeroy=nonzeroy, x_base=leftx_base)
-        self.line_right.fit(nonzerox=nonzerox, nonzeroy=nonzeroy, x_base=rightx_base)
+        self.line_left.fit(nonzerox=nonzerox, nonzeroy=nonzeroy, x_base=leftx_base, trace_img=trace_img)
+        self.line_right.fit(nonzerox=nonzerox, nonzeroy=nonzeroy, x_base=rightx_base, trace_img=trace_img)
 
         # TODO keep last line if not detected, keep last line if not parallel, etc.
         if not self._sanity_check_lines(self.line_left, self.line_right):
@@ -255,22 +254,19 @@ class FittedLane(object):
         return nonzerox, nonzeroy
 
     @staticmethod
-    def fit(img):
+    def fit(img, trace_img=None):
         """
         :param img: a binary image containing mostly left and right lane markings
         :return: a FittedLane
         """
 
-        # Create an output image to draw on and  visualize the result
-        out_img = np.dstack((img, img, img)) * 255
-
         leftx_base, rightx_base = FittedLane._lines_left_right_x_bottom(img)
         nonzerox, nonzeroy = FittedLane._lane_pixels_xy(img)
 
-        line_left = LaneLine.create_fit(nonzerox=nonzerox, nonzeroy=nonzeroy, x_base=leftx_base, out_img=out_img)
-        line_right = LaneLine.create_fit(nonzerox=nonzerox, nonzeroy=nonzeroy, x_base=rightx_base, out_img=out_img)
+        line_left = LaneLine.create_fit(nonzerox=nonzerox, nonzeroy=nonzeroy, x_base=leftx_base, trace_img=trace_img)
+        line_right = LaneLine.create_fit(nonzerox=nonzerox, nonzeroy=nonzeroy, x_base=rightx_base, trace_img=trace_img)
 
-        return FittedLane(line_left, line_right, out_img)
+        return FittedLane(line_left, line_right)
 
 
 
