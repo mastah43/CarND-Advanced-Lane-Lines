@@ -20,7 +20,8 @@ TODO
 [image-calibration-undistorted]: ./output_images/calibration1-undistorted.jpg "Calibration Undistorted"
 [image-undistorted]: ./output_images/undistorted.jpg "Undistorted"
 [image-lase-mask]: ./output_images/lane_mask.jpg
-[image-transform-source-points]: ./output_images/straight_lines1_transform.jpg
+[image-transform-source]: ./output_images/straight_lines1_source.jpg
+[image-transform-result]: ./output_images/straight_lines1_source.jpg
 [image-lane-mask-birdview]: ./output_images/lane_mask_birdview.jpg
 [image-lane-git]: ./output_images/lane_fit.jpg
 [image-augmented]: ./output_images/augmented_image.jpg
@@ -65,39 +66,24 @@ A sample result for the distortion correction on a frame from the project video:
 
 #### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
 
-I used a combination of color and gradient thresholds to generate a binary image (thresholding steps at lines # through # in `another_file.py`).  Here's an example of my output for this step.  (note: this is not actually from one of the test images)
+The class LaneIsolator in lane_isolator.py implements producing a binary mask image containing the lane pixels.
+I used only a filter for white and yellow color.
+TODO
 
-![alt text][image3]
+![alt text][image-lase-mask]
 
 #### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
 
-The code for my perspective transform includes a function called `warper()`, which appears in lines 1 through 8 in the file `example.py` (output_images/examples/example.py) (or, for example, in the 3rd code cell of the IPython notebook).  The `warper()` function takes as inputs an image (`img`), as well as source (`src`) and destination (`dst`) points.  I chose the hardcode the source and destination points in the following manner:
+The class CameraImagePerspectiveTransform in camera_birdview_transform.py implements the perspective transformation.
+I am using opencv's getPerspectiveTransform function to compute a transformation matrix. I use the source points 
+depicted in the following image where the lane lines are straight.
 
-```python
-src = np.float32(
-    [[(img_size[0] / 2) - 55, img_size[1] / 2 + 100],
-    [((img_size[0] / 6) - 10), img_size[1]],
-    [(img_size[0] * 5 / 6) + 60, img_size[1]],
-    [(img_size[0] / 2 + 55), img_size[1] / 2 + 100]])
-dst = np.float32(
-    [[(img_size[0] / 4), 0],
-    [(img_size[0] / 4), img_size[1]],
-    [(img_size[0] * 3 / 4), img_size[1]],
-    [(img_size[0] * 3 / 4), 0]])
-```
+![alt text][image-transform-source]
 
-This resulted in the following source and destination points:
+I verified that my perspective transform was working as expected by seeing that the birdview transformation result
+of the straight line image shows parallel lane lines:
 
-| Source        | Destination   | 
-|:-------------:|:-------------:| 
-| 585, 460      | 320, 0        | 
-| 203, 720      | 320, 720      |
-| 1127, 720     | 960, 720      |
-| 695, 460      | 960, 0        |
-
-I verified that my perspective transform was working as expected by drawing the `src` and `dst` points onto a test image and its warped counterpart to verify that the lines appear parallel in the warped image.
-
-![alt text][image4]
+![alt text][image-transform-result]
 
 #### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
 
