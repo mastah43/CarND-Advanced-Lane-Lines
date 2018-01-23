@@ -23,8 +23,8 @@ class LaneImageAugmenter(object):
         width_too_narrow_str = "width too narrow: {0}".format(lane.lane_width_too_narrow_count)
         lines_not_parallel_str = "lines not parallel: {0}".format(lane.lane_lines_not_parallel_count)
 
-        x_col1 = 50
-        x_col2 = 500
+        x_col1 = 10
+        x_col2 = 450
         cv2.putText(dst, radius_str, (x_col1, 100), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
         cv2.putText(dst, deviation_str, (x_col1, 150), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
         cv2.putText(dst, lane_width_str, (x_col1, 200), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
@@ -53,10 +53,10 @@ class LaneImageAugmenter(object):
         cv2.fillPoly(color_warp, np.int_([pts]), (0, 255, 0))
 
         # Warp the blank back to original image space using inverse perspective matrix (Minv)
-        newwarp = self.img_transformer.birdview_to_camera(color_warp)
+        img_lanes_camera = self.img_transformer.birdview_to_camera(color_warp)
 
         # Combine the result with the original image
-        img_merge = cv2.addWeighted(dst, 1, newwarp, 0.3, 0)
+        img_merge = cv2.addWeighted(dst, 1, img_lanes_camera, 0.3, 0)
 
         # draw step images
         if imgs_steps is not None:
@@ -75,7 +75,7 @@ class LaneImageAugmenter(object):
                         cv2.resize(img_step, (img_step_width, img_step_height))
                 else:
                     result[y_top_img_step:y_top_img_step + img_step_height,
-                    img_lanes_width:img_lanes_width + img_step_width] = \
+                        img_lanes_width:img_lanes_width + img_step_width] = \
                         cv2.resize(img_step, (img_step_width, img_step_height))
                 y_top_img_step += img_step_height
         else:
