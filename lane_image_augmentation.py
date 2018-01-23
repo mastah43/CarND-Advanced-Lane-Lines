@@ -9,11 +9,9 @@ class LaneImageAugmenter(object):
         self.img_transformer:CameraImagePerspectiveTransform = img_transformer
 
     def draw_all(self, dst, lane:FittedLane, imgs_steps=None):
-        return self.draw_lanes(dst, lane, imgs_steps)
-
-    def draw_images_steps(self, img_result, imgs_steps):
-        # TODO use function
-        pass
+        img_augmented = self.draw_lanes(dst, lane, imgs_steps)
+        self.draw_statistics(img_augmented, lane)
+        return img_augmented
 
     def draw_statistics(self, dst, lane:FittedLane):
         radius_str = "radius: {0:.0f} m".format(lane.lane_radius_meters())
@@ -25,17 +23,17 @@ class LaneImageAugmenter(object):
         width_too_narrow_str = "width too narrow: {0}".format(lane.lane_width_too_narrow_count)
         lines_not_parallel_str = "lines not parallel: {0}".format(lane.lane_lines_not_parallel_count)
 
-        cv2.putText(dst, radius_str, (100, 100), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
-        cv2.putText(dst, deviation_str, (100, 150), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
-        cv2.putText(dst, lane_width_str, (100, 200), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
-        cv2.putText(dst, left_not_detected_str, (700, 100), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
-        cv2.putText(dst, right_not_detected_str, (700, 150), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
-        cv2.putText(dst, width_too_narrow_str, (700, 200), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
-        cv2.putText(dst, lines_not_parallel_str, (700, 250), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
+        x_col1 = 50
+        x_col2 = 500
+        cv2.putText(dst, radius_str, (x_col1, 100), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
+        cv2.putText(dst, deviation_str, (x_col1, 150), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
+        cv2.putText(dst, lane_width_str, (x_col1, 200), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
+        cv2.putText(dst, left_not_detected_str, (x_col2, 100), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
+        cv2.putText(dst, right_not_detected_str, (x_col2, 150), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
+        cv2.putText(dst, width_too_narrow_str, (x_col2, 200), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
+        cv2.putText(dst, lines_not_parallel_str, (x_col2, 250), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
 
     def draw_lanes(self, dst, lane:FittedLane, imgs_steps=None):
-        # TODO option to specify destination image
-
         # Create an image to draw the lines on
         warp_zero = np.zeros((dst.shape[0], dst.shape[1])).astype(np.uint8)
         color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
@@ -57,12 +55,10 @@ class LaneImageAugmenter(object):
         # Warp the blank back to original image space using inverse perspective matrix (Minv)
         newwarp = self.img_transformer.birdview_to_camera(color_warp)
 
-        # write text for radius and deviation
-        self.draw_statistics(newwarp, lane)
-
         # Combine the result with the original image
         img_merge = cv2.addWeighted(dst, 1, newwarp, 0.3, 0)
 
+        # draw step images
         if imgs_steps is not None:
             img_full_height = img_merge.shape[0]
             img_full_width = img_merge.shape[1]
@@ -70,10 +66,8 @@ class LaneImageAugmenter(object):
             img_step_width = 256
             img_lanes_width = img_full_width - img_step_width
             result = np.zeros((img_full_height, img_full_width, 3), dtype=np.uint8)
-            result[0:img_full_height, 0:img_full_width, :] = cv2.resize(img_merge, (img_full_width, img_full_height))
+            result[0:img_full_height, 0:img_lanes_width, :] = cv2.resize(img_merge, (img_lanes_width, img_full_height))
 
-            # show mask for lane pixels
-            # TODO
             y_top_img_step = 0
             for img_step in imgs_steps:
                 if (len(img_step.shape) == 2) or (img_step.shape[2] == 1):
