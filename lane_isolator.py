@@ -56,16 +56,16 @@ class LaneIsolator(object):
         return sobel_mag_mask
 
     # Define a function to threshold an image for a given range and Sobel kernel
-    def _dir_threshold(self, sobelx, sobely, thresh=(0, np.pi / 2)):
+    def _dir_threshold(self, sobelx, sobely, thresh=(-np.pi / 2, np.pi / 2)):
         # Take the absolute value of the gradient direction,
         # apply a threshold, and create a binary image result
         absgraddir = np.arctan2(np.absolute(sobely), np.absolute(sobelx))
-        sobel_dir_mask = np.zeros_like(absgraddir)
+        sobel_dir_mask = np.zeros_like(absgraddir) # TODO .astype(np.uint8
         sobel_dir_mask[(absgraddir >= thresh[0]) & (absgraddir <= thresh[1])] = 1
 
         return sobel_dir_mask
 
-    def _color_threshold(self, img, thresh = (90, 255)):
+    def _color_threshold(self, img):
         hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
 
         yellow_hsv_low = np.array([0, 100, 100])
@@ -84,35 +84,35 @@ class LaneIsolator(object):
         return color_mask
 
     def isolate_lanes(self, img):
-        self._gray = cv2.cvtColor(src=img, code=cv2.COLOR_RGB2GRAY, dst=self._gray)
-        self.trace_intermediate_image('converted to gray scale', self._gray)
-        self._sobelx = cv2.Sobel(src=self._gray, ddepth=cv2.CV_64F, dx=1, dy=0, dst=self._sobelx, ksize=self.ksize)
-        self.trace_intermediate_image('sobel x', self._sobelx)
-        self._sobely = cv2.Sobel(src=self._gray, ddepth=cv2.CV_64F, dx=0, dy=1, dst=self._sobely, ksize=self.ksize)
-        self.trace_intermediate_image('sobel y', self._sobely)
+        #self._gray = cv2.cvtColor(src=img, code=cv2.COLOR_RGB2GRAY, dst=self._gray)
+        #self.trace_intermediate_image('converted to gray scale', self._gray)
 
-        gradx = self._abs_sobel_thresh(
-            sobel=self._sobelx, thresh_min=self.gradx_thresh[0], thresh_max=self.gradx_thresh[1])
-        self.trace_intermediate_image('gradx', gradx)
+        #self._sobelx = cv2.Sobel(src=self._gray, ddepth=cv2.CV_64F, dx=1, dy=0, dst=self._sobelx, ksize=self.ksize)
+        #self.trace_intermediate_image('sobel x', self._sobelx)
 
-        grady = self._abs_sobel_thresh(
-            sobel=self._sobely, thresh_min=self.grady_thresh[0], thresh_max=self.grady_thresh[1])
-        self.trace_intermediate_image('grady', grady)
+        #self._sobely = cv2.Sobel(src=self._gray, ddepth=cv2.CV_64F, dx=0, dy=1, dst=self._sobely, ksize=self.ksize)
+        #self.trace_intermediate_image('sobel y', self._sobely)
 
-        mag_binary = self._mag_thresh(sobelx=self._sobelx, sobely=self._sobely, mag_thresh=self.mag_thresh)
-        self.trace_intermediate_image('magnitude', mag_binary)
+        #gradx = self._abs_sobel_thresh(
+        #    sobel=self._sobelx, thresh_min=self.gradx_thresh[0], thresh_max=self.gradx_thresh[1])
+        #self.trace_intermediate_image('gradx', gradx)
 
-        # TODO direction of sobel is wrong - invert it (horicontal to 45 degree is needed)
-        dir_binary = self._dir_threshold(sobelx=self._sobelx, sobely=self._sobely, thresh=self.dir_thresh)
-        self.trace_intermediate_image('direction', dir_binary)
+        #grady = self._abs_sobel_thresh(
+        #    sobel=self._sobely, thresh_min=self.grady_thresh[0], thresh_max=self.grady_thresh[1])
+        #self.trace_intermediate_image('grady', grady)
 
-        color_binary = self._color_threshold(img, thresh = (90, 255))
+        #mag_binary = self._mag_thresh(sobelx=self._sobelx, sobely=self._sobely, mag_thresh=self.mag_thresh)
+        #self.trace_intermediate_image('magnitude', mag_binary)
+
+        #dir_binary = self._dir_threshold(sobelx=self._sobelx, sobely=self._sobely, thresh=self.dir_thresh)
+        #self.trace_intermediate_image('direction', dir_binary)
+
+        color_binary = self._color_threshold(img)
         self.trace_intermediate_image('color mask', color_binary)
 
-        lanes = np.zeros_like(dir_binary)
-        # TODO lanes[(dir_binary == 1) & (mag_binary == 1) & (color_binary == 1)] = 1
-        lanes[(color_binary == 1)] = 1
-        self.trace_intermediate_image('lanes', lanes)
+        #lanes = np.zeros_like(dir_binary)
+        #lanes[((dir_binary == 1) & (mag_binary == 1) & (gradx == 1) & (grady == 1)) | (color_binary == 1)] = 1
+        #lanes[(color_binary == 1)] = 1
+        #self.trace_intermediate_image('lanes', lanes)
 
-        # TODO return lanes
         return color_binary

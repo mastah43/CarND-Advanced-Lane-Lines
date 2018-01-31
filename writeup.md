@@ -6,7 +6,6 @@
 
 The goals / steps of this project are the following:
 
-TODO
 * Compute the camera calibration matrix and distortion coefficients given a set of chessboard images.
 * Apply a distortion correction to raw images.
 * Use color transforms, gradients, etc., to create a thresholded binary image.
@@ -18,13 +17,16 @@ TODO
 
 [//]: # (Image References)
 [image-calibration-undistorted]: ./output_images/calibration1-undistorted.jpg "Calibration Undistorted"
-[image-undistorted]: ./output_images/undistorted.jpg "Undistorted"
-[image-lase-mask]: ./output_images/lane_mask.jpg
+
 [image-transform-source]: ./output_images/straight_lines1_source.jpg
 [image-transform-result]: ./output_images/straight_lines1_source.jpg
-[image-lane-mask-birdview]: ./output_images/lane_mask_birdview.jpg
-[image-lane-fit]: ./output_images/lane_fit.jpg
-[image-augmented]: ./output_images/augmented_image.jpg
+[image-undistorted]: ./output_images/01_undistorted.jpg "Undistorted"
+[image-yellow-color-mask]: ./output_images/02_yellow_color_mask.jpg
+[image-white-color-mask]: ./output_images/03_white_color_mask.jpg
+[image-color-mask]: ./output_images/04_color_mask.jpg
+[image-birdview]: ./output_images/05_birdview.jpg
+[image-lane-fit]: ./output_images/06_lane_fit.jpg
+[image-augmented]: ./output_images/07_augmented_image.jpg
 [video-result]: ./project_video_result.mp4 "Video"
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
@@ -67,10 +69,18 @@ A sample result for the distortion correction on a frame from the project video:
 #### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
 
 The class LaneIsolator in lane_isolator.py implements producing a binary mask image containing the potential lane pixels.
-I used only a filter for white and yellow color.
-TODO trial and error of different combinations and color thresholds
+I experimented with a combination of color mask, x and y gradient, direction and magnitude sobel
+Finally I choosed to used only a combined filter for white and yellow color in HSV color space.
+I am using HSV color space to be more robust against varying lighting conditions.
 
-![alt text][image-lase-mask]
+Yellow color mask for the distorted image shown above:
+![alt text][image-yellow-color-mask]
+
+White color mask for the distorted image shown above:
+![alt text][image-white-color-mask]
+
+Combined yellow and white color mask:
+![alt text][image-color-mask]
 
 #### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
 
@@ -141,6 +151,7 @@ Here's a [link to my video result](./project_video_result.mp4)
 #### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  
 
 TODO Where will your pipeline likely fail?  What could you do to make it more robust?
+TODO using only color mask - more tuning using sobal magnitude and gradient may help, fails on false positive, etc.
 
 Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
 

@@ -17,21 +17,20 @@ class LaneImageAugmenter(object):
         radius_str = "radius: {0:.0f} m".format(lane.lane_radius_meters())
         deviation_str = "deviation: {0:.3f}m".format(lane.deviation_from_lane_center_meters())
         lane_width_str = "width: {0:.2f}m".format(lane.lane_width_meters())
-        lane_width_str = "width: {0:.2f}m".format(lane.lane_width_meters())
-        left_not_detected_str = "left not detected: {0}".format(lane.line_left.fit_outlier_count)
-        right_not_detected_str = "right not detected: {0}".format(lane.line_right.fit_outlier_count)
+        left_not_detected_str = "left not detected: {0}".format(lane.line_left.fit_rejected_count_total)
+        right_not_detected_str = "right not detected: {0}".format(lane.line_right.fit_rejected_count_total)
         width_too_narrow_str = "width too narrow: {0}".format(lane.lane_width_too_narrow_count)
         lines_not_parallel_str = "lines not parallel: {0}".format(lane.lane_lines_not_parallel_count)
 
         x_col1 = 10
         x_col2 = 450
-        cv2.putText(dst, radius_str, (x_col1, 100), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
-        cv2.putText(dst, deviation_str, (x_col1, 150), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
-        cv2.putText(dst, lane_width_str, (x_col1, 200), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
-        cv2.putText(dst, left_not_detected_str, (x_col2, 100), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
-        cv2.putText(dst, right_not_detected_str, (x_col2, 150), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
-        cv2.putText(dst, width_too_narrow_str, (x_col2, 200), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
-        cv2.putText(dst, lines_not_parallel_str, (x_col2, 250), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
+        cv2.putText(dst, radius_str, (x_col1, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
+        cv2.putText(dst, deviation_str, (x_col1, 100), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
+        cv2.putText(dst, lane_width_str, (x_col1, 150), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
+        cv2.putText(dst, left_not_detected_str, (x_col2, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
+        cv2.putText(dst, right_not_detected_str, (x_col2, 100), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
+        cv2.putText(dst, width_too_narrow_str, (x_col2, 150), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
+        cv2.putText(dst, lines_not_parallel_str, (x_col2, 200), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
 
     def draw_lanes(self, dst, lane:FittedLane, imgs_steps=None):
         # Create an image to draw the lines on
