@@ -12,9 +12,10 @@ import logging
 
 def write_lane_augmentation_video(src_video_file:str, dst_video_file:str):
     write_image_step = [1]
+    write_frame = [-1] # set to positive value if a certain frames processing images should be written do disk
 
     def log_output_image(name, img):
-        if frames_until_log_image[0] == 0:
+        if frame_count[0] == write_frame:
             file_path = "./output_images/" + '{:02d}'.format(write_image_step[0]) + "_" + name.replace(" ", "_") + ".jpg"
             if img.dtype == np.float64:
                 img = img.astype(np.uint8) # does not work with cv2.imwrite
@@ -40,10 +41,9 @@ def write_lane_augmentation_video(src_video_file:str, dst_video_file:str):
 
     clip = VideoFileClip(src_video_file)
 
-    frames_until_log_image = [-1] #[10]
+    frame_count = [0]
 
     def process_image(img):
-        frames_until_log_image[0] -= 1
 
         img_undistorted = img_undistorter.undistort(img)
         log_output_image('undistorted', img_undistorted)
@@ -57,14 +57,18 @@ def write_lane_augmentation_video(src_video_file:str, dst_video_file:str):
         lane = lane_smoother.fit(img_birdview, fit_trace_img)
         log_output_image('lane_fit', fit_trace_img)
 
-        log_output_image('augmented_image', lane_img_augmenter.draw_all(np.copy(img_undistorted), lane))
+        if frame_count[0] == write_frame:
+            log_output_image('augmented_image',
+                         lane_img_augmenter.draw_all(dst=np.copy(img_undistorted), lane=lane))
 
-        return lane_img_augmenter.draw_all(img_undistorted, lane, [img_binary, fit_trace_img])
+        frame_count[0] += 1
+        return lane_img_augmenter.draw_all(dst=img_undistorted, lane=lane,
+                                           imgs_steps=[img_binary, fit_trace_img], frame_no=frame_count[0])
 
     clip_cut = clip
     clip_cut = clip.subclip(19, 24) # TODO
     clip_augmented = clip_cut.fl_image(process_image)
-    clip_augmented.write_videofile(dst_video_file, audio=False, progress_bar=True)
+    clip_augmented.write_videofile(dst_video_file, audio=False, progress_bar=True, ffmpeg_params=['-force_key_frames', 'expr:gte(t,n_forced*1)'])
 
 
 if __name__ == '__main__':

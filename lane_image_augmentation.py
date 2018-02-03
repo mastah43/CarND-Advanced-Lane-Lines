@@ -8,17 +8,17 @@ class LaneImageAugmenter(object):
     def __init__(self, img_transformer:CameraImagePerspectiveTransform):
         self.img_transformer:CameraImagePerspectiveTransform = img_transformer
 
-    def draw_all(self, dst, lane:FittedLane, imgs_steps=None):
-        img_augmented = self.draw_lanes(dst, lane, imgs_steps)
-        self.draw_statistics(img_augmented, lane)
+    def draw_all(self, dst, lane: FittedLane, imgs_steps=None, frame_no: int=None):
+        img_augmented = self.draw_lane(dst, lane, imgs_steps)
+        self.draw_statistics(img_augmented, lane, frame_no)
         return img_augmented
 
-    def draw_statistics(self, dst, lane:FittedLane):
+    def draw_statistics(self, dst, lane:FittedLane, frame_no : int=None):
         radius_str = "radius: {0:.0f} m".format(lane.lane_radius_meters())
         deviation_str = "deviation: {0:.3f}m".format(lane.deviation_from_lane_center_meters())
         lane_width_str = "width: {0:.2f}m".format(lane.lane_width_meters())
-        left_not_detected_str = "left not detected: {0}".format(lane.line_left.fit_rejected_count_total)
-        right_not_detected_str = "right not detected: {0}".format(lane.line_right.fit_rejected_count_total)
+        left_not_detected_str = "left rejected in row: {0}".format(lane.line_left.fits_rejected_in_a_row_count)
+        right_not_detected_str = "right rejected in row: {0}".format(lane.line_right.fits_rejected_in_a_row_count)
         width_too_narrow_str = "width too narrow: {0}".format(lane.lane_width_too_narrow_count)
         lines_not_parallel_str = "lines not parallel: {0}".format(lane.lane_lines_not_parallel_count)
 
@@ -31,8 +31,11 @@ class LaneImageAugmenter(object):
         cv2.putText(dst, right_not_detected_str, (x_col2, 100), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
         cv2.putText(dst, width_too_narrow_str, (x_col2, 150), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
         cv2.putText(dst, lines_not_parallel_str, (x_col2, 200), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
+        if frame_no is not None:
+            frame_str = "frame: {0}".format(frame_no)
+            cv2.putText(dst, frame_str, (x_col2, 250), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
 
-    def draw_lanes(self, dst, lane:FittedLane, imgs_steps=None):
+    def draw_lane(self, dst, lane:FittedLane, imgs_steps=None):
         # Create an image to draw the lines on
         warp_zero = np.zeros((dst.shape[0], dst.shape[1])).astype(np.uint8)
         color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
@@ -49,7 +52,9 @@ class LaneImageAugmenter(object):
         pts = np.hstack((pts_left, pts_right))
 
         # Draw the lane onto the warped blank image
-        cv2.fillPoly(color_warp, np.int_([pts]), (0, 255, 0))
+        color_green = (0, 255, 0)
+        color_red = (255, 0, 0)
+        cv2.fillPoly(color_warp, np.int_([pts]), color_green if lane.last_ok else color_red)
 
         # Warp the blank back to original image space using inverse perspective matrix (Minv)
         img_lanes_camera = self.img_transformer.birdview_to_camera(color_warp)
