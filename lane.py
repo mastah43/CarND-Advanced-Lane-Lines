@@ -17,28 +17,17 @@ class LaneImageSpec:
     height = 720
 
 
-class LaneLine(object):
-    def __init__(self):
-        self.fit_pix = None
-        self.fit_meters = None
-
-        frame_count_to_smooth_fits = 5
-        self.fits_history_pix = collections.deque([], frame_count_to_smooth_fits)
-        self.fits_history_meters = collections.deque([], frame_count_to_smooth_fits)
-        self.fit_pix = None
-        self.fit_meters = None
-        self.fit_last_pix = None
-        self.fit_last_meters = None
-        self.fit_rejected_count_total = 0
-        self.fits_rejected_in_a_row_count = 0
-        self.detected = False
+class Fit:
+    def __init__(self, fit_pix, fit_meters):
+        self.fit_pix = fit_pix
+        self.fit_meters = fit_meters
 
     @staticmethod
     def x_for_fit(fit, y_pixels):
         return fit[0] * y_pixels ** 2 + fit[1] * y_pixels + fit[2]
 
     def x_pixels(self, y_pixels):
-        return LaneLine.x_for_fit(self.fit_pix, y_pixels)
+        return Fit.x_for_fit(self.fit_pix, y_pixels)
 
     def x_meters(self, y_pixels):
         y_meters = y_pixels * LaneImageSpec.ym_per_pix
@@ -46,20 +35,55 @@ class LaneLine(object):
 
     def curve_radius_meters(self):
         y_eval = LaneImageSpec.height
-        return ((1 + (2 * self.fit_meters[0] * y_eval * LaneImageSpec.ym_per_pix + self.fit_meters[1]) ** 2) ** 1.5) / np.absolute(
+        return ((1 + (
+        2 * self.fit_meters[0] * y_eval * LaneImageSpec.ym_per_pix + self.fit_meters[1]) ** 2) ** 1.5) / np.absolute(
             2 * self.fit_meters[0])
+
+
+class LaneLine(object):
+    def __init__(self):
+        frame_count_to_smooth_fits = 5
+        self.fit_history = collections.deque([], frame_count_to_smooth_fits)
+        self.fit = None
+        self.fit_rejected_count_total = 0
+        self.fits_rejected_in_a_row_count = 0
+        self.detected = False
+
+    def curve_radius_meters(self):
+        return self.fit.curve_radius_meters()
+
+    def x_meters(self, y_pixels):
+        return self.fit.x_meters(y_pixels)
+
+    def x_pixels(self, y_pixels):
+        return self.fit.x_pixels(y_pixels)
 
     @staticmethod
     def smooth_fit(fits):
-        return np.average(fits, axis=0)
+        fit_pix = np.average([fit.fit_pix for fit in fits], axis=0)
+        fit_meters = np.average([fit.fit_meters for fit in fits], axis=0)
+        return Fit(fit_pix=fit_pix, fit_meters=fit_meters)
 
     @staticmethod
-    def is_fit_outlier(fit, fit_last):
+    def is_fit_outlier(fit: Fit, fit_last: Fit):
         y_pixels = np.linspace(0, LaneImageSpec.height - 1, 10)
-        return reduce((lambda a, b: a or b),
-                      map((lambda y: abs((LaneLine.x_for_fit(fit, y) / LaneLine.x_for_fit(fit_last, y)) - 1) > 0.05),
+        return reduce((lambda a, b: np.any(a) or np.any(b)),
+                      map((lambda y: abs((fit.x_pixels(y_pixels) / fit_last.x_pixels(y_pixels)) - 1) > 0.05),
                           y_pixels))
 
+    def add_fit(self, fit):
+        if fit is not None:
+            self.detected = True
+            self.fit_history.append(fit)
+            self.fit = LaneLine.smooth_fit(self.fit_history)
+        else:
+            self.detected = False
+            if len(self.fit_history) > 0:
+                self.fit_history.pop()
+            if len(self.fit_history) > 0:
+                self.fit = LaneLine.smooth_fit(self.fit_history)
+
+    """ TODO
     def invalidate_last_fit(self):
         self.fits_history_pix.pop()
         self.fits_history_meters.pop()
@@ -70,10 +94,11 @@ class LaneLine(object):
         else:
             self.fit_pix = self.fit_last_pix
             self.fit_meters = self.fit_last_meters
+    """
 
-    def fit(self, nonzerox, nonzeroy, x_base:int, trace_img=None):
+    def create_fit(self, nonzerox, nonzeroy, x_base:int, trace_img=None):
         """
-        Returns a fit polynome for the given potential lane pixels
+        Returns a fit polynomial for the given potential lane pixels
         :param nonzerox:
         :param nonzeroy:
         :param x_base:
@@ -99,36 +124,29 @@ class LaneLine(object):
         # Fit second order polynomial for pixels and meters
         fit_new_pix = np.polyfit(lane_pix_y, lane_pix_x, 2)
         fit_new_meters = np.polyfit(lane_pix_y * LaneImageSpec.ym_per_pix, lane_pix_x * LaneImageSpec.xm_per_pix, 2)
+        fit = Fit(fit_new_pix, fit_new_meters)
 
         # Reject fit if too far away from last fit but recover after several frames
         fit_good = None
-        if (len(self.fits_history_pix) == 0) or not LaneLine.is_fit_outlier(fit_new_pix, self.fit_pix):
+        if (len(self.fit_history) == 0) or self.fit is None or not LaneLine.is_fit_outlier(fit, self.fit):
             self.fits_rejected_in_a_row_count = 0
-            self.fits_history_pix.append(fit_new_pix)
-            self.fits_history_meters.append(fit_new_meters)
-            self.fit_last_pix = self.fit_pix
-            self.fit_last_meters = self.fit_meters
-            self.fit_pix = LaneLine.smooth_fit(self.fits_history_pix)
-            self.fit_meters = LaneLine.smooth_fit(self.fits_history_meters)
-            self.detected = True
+            fit_good = True
         else:
+            # TODO
+            fit_good = False
             self.fit_rejected_count_total += 1
             self.fits_rejected_in_a_row_count += 1
-            self.fits_history_pix.popleft()
-            self.fits_history_meters.popleft()
-            self.detected = False
-            if len(self.fits_history_pix) > 0:
-                self.fit_pix = LaneLine.smooth_fit(self.fits_history_pix)
-                self.fit_meters = LaneLine.smooth_fit(self.fits_history_meters)
 
         # Trace: Draw fit poly - green for good, yellow for bad
         if trace_img is not None:
             img_height = trace_img.shape[0]
             plot_y = np.linspace(0, img_height - 1, img_height)
-            plot_x = LaneLine.x_for_fit(fit_new_pix, plot_y)
+            plot_x = fit.x_pixels(plot_y)
             plot_pts = np.array([np.transpose(np.vstack([plot_x, plot_y]))])
             plot_color = (0, 255, 0) if self.detected else (255, 255, 0)
             cv2.polylines(trace_img, np.int32([plot_pts]), isClosed=False, color=plot_color, thickness=8)
+
+        return fit if fit_good else None
 
     def find_lane_pixel_indices(self, nonzerox, nonzeroy, trace_img, x_base):
 
@@ -137,7 +155,7 @@ class LaneLine(object):
         margin = 80
 
         if self.detected:
-            nonzerox_fit_last = LaneLine.x_for_fit(self.fit_pix, nonzeroy)
+            nonzerox_fit_last = self.fit.x_pixels(nonzeroy)
             lane_pix_indices = (
                 (nonzerox > (nonzerox_fit_last - margin)) &
                 (nonzerox < (nonzerox_fit_last + margin)))
@@ -183,11 +201,13 @@ class LaneLine(object):
 
         return lane_pix_indices
 
-
     @staticmethod
-    def create_fit(nonzerox, nonzeroy, x_base, trace_img=None):
+    def create_line(nonzerox, nonzeroy, x_base, trace_img=None):
         line = LaneLine()
-        line.fit(nonzerox, nonzeroy, x_base, trace_img)
+        fit = line.create_fit(nonzerox, nonzeroy, x_base, trace_img)
+        if fit is None:
+            return None
+        line.add_fit(fit)
         return line
 
 
@@ -234,9 +254,11 @@ class FittedLane(object):
             self.lane_width_too_narrow_count += 1
             lines_ok = False
 
+        """ TODO
         if not self._are_lines_near_parallel():
             self.lane_lines_not_parallel_count += 1
             lines_ok = False
+            """
 
         return lines_ok
 
@@ -247,18 +269,19 @@ class FittedLane(object):
         if trace_img is not None:
             trace_img[nonzeroy, nonzerox] = [255, 255, 255]
 
-        fit_left = self.line_left.fit(nonzerox=nonzerox, nonzeroy=nonzeroy, x_base=leftx_base, trace_img=trace_img)
-        fit_right = self.line_right.fit(nonzerox=nonzerox, nonzeroy=nonzeroy, x_base=rightx_base, trace_img=trace_img)
+        fit_left: Fit = self.line_left.create_fit(nonzerox=nonzerox, nonzeroy=nonzeroy, x_base=leftx_base, trace_img=trace_img)
+        fit_right: Fit = self.line_right.create_fit(nonzerox=nonzerox, nonzeroy=nonzeroy, x_base=rightx_base, trace_img=trace_img)
 
         # remove last fits if the two lane lines are not good together
         if not self._lines_ok():
-            if self.line_left.detected:
-                self.line_left.invalidate_last_fit()
-            if self.line_right.detected:
-                self.line_right.invalidate_last_fit()
+            fit_left = None
+            fit_right = None
             self.last_ok = False
         else:
             self.last_ok = True
+
+        self.line_left.add_fit(fit_left)
+        self.line_right.add_fit(fit_right)
 
     @staticmethod
     def _lines_left_right_x_bottom(img):
@@ -297,10 +320,13 @@ class FittedLane(object):
         leftx_base, rightx_base = FittedLane._lines_left_right_x_bottom(img)
         nonzerox, nonzeroy = FittedLane._lane_pixels_xy(img)
 
-        line_left = LaneLine.create_fit(nonzerox=nonzerox, nonzeroy=nonzeroy, x_base=leftx_base, trace_img=trace_img)
-        line_right = LaneLine.create_fit(nonzerox=nonzerox, nonzeroy=nonzeroy, x_base=rightx_base, trace_img=trace_img)
+        line_left = LaneLine.create_line(nonzerox=nonzerox, nonzeroy=nonzeroy, x_base=leftx_base, trace_img=trace_img)
+        line_right = LaneLine.create_line(nonzerox=nonzerox, nonzeroy=nonzeroy, x_base=rightx_base, trace_img=trace_img)
 
-        return FittedLane(line_left, line_right)
+        if line_left is not None and line_right is not None:
+            return FittedLane(line_left, line_right)
+        else:
+            return None
 
 
 

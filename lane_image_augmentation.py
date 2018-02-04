@@ -42,7 +42,7 @@ class LaneImageAugmenter(object):
 
         # Generate points for plotting
         img_width = color_warp.shape[0]
-        ploty = np.linspace(0, img_width- 1, img_width)
+        ploty = np.linspace(0, img_width-1, img_width)
         left_fitx = lane.line_left.x_pixels(ploty)
         right_fitx = lane.line_right.x_pixels(ploty)
 

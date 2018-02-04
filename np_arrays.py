@@ -29,3 +29,5 @@ if __name__ == "__main__":
     a[y2,x2] = 1
     print("a")
     print(a)
+
+    print(np.ravel(list(zip([1,3,5], [2,4,6]))))

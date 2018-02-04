@@ -57,16 +57,21 @@ def write_lane_augmentation_video(src_video_file:str, dst_video_file:str):
         lane = lane_smoother.fit(img_birdview, fit_trace_img)
         log_output_image('lane_fit', fit_trace_img)
 
-        if frame_count[0] == write_frame:
-            log_output_image('augmented_image',
-                         lane_img_augmenter.draw_all(dst=np.copy(img_undistorted), lane=lane))
+        if frame_count[0] == write_frame and lane is not None:
+            log_output_image(
+                'augmented_image',
+                lane_img_augmenter.draw_all(dst=np.copy(img_undistorted), lane=lane))
 
         frame_count[0] += 1
-        return lane_img_augmenter.draw_all(dst=img_undistorted, lane=lane,
-                                           imgs_steps=[img_binary, fit_trace_img], frame_no=frame_count[0])
+        if lane is not None:
+            return lane_img_augmenter.draw_all(
+                dst=img_undistorted, lane=lane,
+                imgs_steps=[img_binary, fit_trace_img], frame_no=frame_count[0])
+        else:
+            return img
 
     clip_cut = clip
-    clip_cut = clip.subclip(19, 24) # TODO
+    #clip_cut = clip.subclip(19, 24) # TODO
     clip_augmented = clip_cut.fl_image(process_image)
     clip_augmented.write_videofile(dst_video_file, audio=False, progress_bar=True, ffmpeg_params=['-force_key_frames', 'expr:gte(t,n_forced*1)'])
 

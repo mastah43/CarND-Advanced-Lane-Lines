@@ -66,18 +66,18 @@ class LaneIsolator(object):
         return sobel_dir_mask
 
     def _color_threshold(self, img):
-        hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+        hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
 
-        yellow_hsv_low = np.array([0, 100, 100])
-        yellow_hsv_high = np.array([50, 255, 255])
+        yellow_hls_low = np.array([0, 100, 100])
+        yellow_hls_high = np.array([255, 255, 255])
 
-        white_hsv_low = np.array([20, 0, 180])
-        white_hsv_high = np.array([255, 80, 255])
+        white_rgb_low = np.array([200, 200, 200])
+        white_rgb_high = np.array([255, 255, 255])
 
-        yellow_mask = cv2.inRange(hsv, yellow_hsv_low, yellow_hsv_high)
+        yellow_mask = cv2.inRange(hls, yellow_hls_low, yellow_hls_high)
         self.trace_intermediate_image('yellow color mask', yellow_mask)
 
-        white_mask = cv2.inRange(hsv, white_hsv_low, white_hsv_high)
+        white_mask = cv2.inRange(img, white_rgb_low, white_rgb_high)
         self.trace_intermediate_image('white color mask', white_mask)
 
         color_mask = cv2.bitwise_or(yellow_mask, white_mask)
