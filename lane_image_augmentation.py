@@ -15,22 +15,26 @@ class LaneImageAugmenter(object):
 
     def draw_statistics(self, dst, lane:FittedLane, frame_no : int=None):
         radius_str = "radius: {0:.0f} m".format(lane.lane_radius_meters())
+        radius_l_str = "radius l: {0:.0f} m".format(lane.line_left.curve_radius_meters())
+        radius_r_str = "radius r: {0:.0f} m".format(lane.line_right.curve_radius_meters())
         deviation_str = "deviation: {0:.3f}m".format(lane.deviation_from_lane_center_meters())
         lane_width_str = "width: {0:.2f}m".format(lane.lane_width_meters())
         left_not_detected_str = "left rejected in row: {0}".format(lane.line_left.fits_rejected_in_a_row_count)
         right_not_detected_str = "right rejected in row: {0}".format(lane.line_right.fits_rejected_in_a_row_count)
         width_too_narrow_str = "width too narrow: {0}".format(lane.lane_width_too_narrow_count)
-        lines_not_parallel_str = "lines not parallel: {0}".format(lane.lane_lines_not_parallel_count)
+        #lines_not_parallel_str = "lines not parallel: {0}".format(lane.lane_lines_not_parallel_count)
 
         x_col1 = 10
         x_col2 = 450
         cv2.putText(dst, radius_str, (x_col1, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
-        cv2.putText(dst, deviation_str, (x_col1, 100), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
-        cv2.putText(dst, lane_width_str, (x_col1, 150), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
+        cv2.putText(dst, radius_l_str, (x_col1, 100), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
+        cv2.putText(dst, radius_r_str, (x_col1, 150), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
+        cv2.putText(dst, deviation_str, (x_col1, 200), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
+        cv2.putText(dst, lane_width_str, (x_col1, 250), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
         cv2.putText(dst, left_not_detected_str, (x_col2, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
         cv2.putText(dst, right_not_detected_str, (x_col2, 100), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
         cv2.putText(dst, width_too_narrow_str, (x_col2, 150), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
-        cv2.putText(dst, lines_not_parallel_str, (x_col2, 200), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
+        #cv2.putText(dst, lines_not_parallel_str, (x_col2, 200), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)
         if frame_no is not None:
             frame_str = "frame: {0}".format(frame_no)
             cv2.putText(dst, frame_str, (x_col2, 250), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color=255, thickness=4)

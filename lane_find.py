@@ -71,7 +71,7 @@ def write_lane_augmentation_video(src_video_file:str, dst_video_file:str):
             return img
 
     clip_cut = clip
-    #clip_cut = clip.subclip(19, 24) # TODO
+    #clip_cut = clip.subclip(19, 24)
     clip_augmented = clip_cut.fl_image(process_image)
     clip_augmented.write_videofile(dst_video_file, audio=False, progress_bar=True, ffmpeg_params=['-force_key_frames', 'expr:gte(t,n_forced*1)'])
 

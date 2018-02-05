@@ -44,7 +44,7 @@ class LaneLine(object):
     def __init__(self):
         frame_count_to_smooth_fits = 5
         self.fit_history = collections.deque([], frame_count_to_smooth_fits)
-        self.fit = None
+        self.fit: Fit = None
         self.fit_rejected_count_total = 0
         self.fits_rejected_in_a_row_count = 0
         self.detected = False
@@ -83,19 +83,6 @@ class LaneLine(object):
             if len(self.fit_history) > 0:
                 self.fit = LaneLine.smooth_fit(self.fit_history)
 
-    """ TODO
-    def invalidate_last_fit(self):
-        self.fits_history_pix.pop()
-        self.fits_history_meters.pop()
-        self.detected = False
-        if len(self.fits_history_pix) > 0:
-            self.fit_pix = LaneLine.smooth_fit(self.fits_history_pix)
-            self.fit_meters = LaneLine.smooth_fit(self.fits_history_meters)
-        else:
-            self.fit_pix = self.fit_last_pix
-            self.fit_meters = self.fit_last_meters
-    """
-
     def create_fit(self, nonzerox, nonzeroy, x_base:int, trace_img=None):
         """
         Returns a fit polynomial for the given potential lane pixels
@@ -132,7 +119,6 @@ class LaneLine(object):
             self.fits_rejected_in_a_row_count = 0
             fit_good = True
         else:
-            # TODO
             fit_good = False
             self.fit_rejected_count_total += 1
             self.fits_rejected_in_a_row_count += 1
@@ -213,9 +199,9 @@ class LaneLine(object):
 
 class FittedLane(object):
 
-    def __init__(self, line_left:LaneLine, line_right:LaneLine):
-        self.line_left = line_left
-        self.line_right = line_right
+    def __init__(self, line_left: LaneLine, line_right: LaneLine):
+        self.line_left: LaneLine = line_left
+        self.line_right: LaneLine = line_right
         self.lane_width_too_narrow_count = 0
         self.lane_lines_not_parallel_count = 0
         self.last_ok = None
