@@ -31,7 +31,7 @@ The following files are contained:
 [image-calibration-undistorted]: ./output_images/calibration1-undistorted.jpg "Calibration Undistorted"
 
 [image-transform-source]: ./output_images/straight_lines1_source.jpg
-[image-transform-result]: ./output_images/straight_lines1_source.jpg
+[image-transform-result]: ./output_images/straight_lines1_transformed.jpg
 [image-undistorted]: ./output_images/01_undistorted.jpg "Undistorted"
 [image-yellow-color-mask]: ./output_images/02_yellow_color_mask.jpg
 [image-white-color-mask]: ./output_images/03_white_color_mask.jpg
