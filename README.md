@@ -21,7 +21,7 @@ In order to run the pipeline to produce the project result video at least python
 It will not run with python 2.
 You could also use the file [requirements.txt](requirements.txt) to setup a conda environment with all
 the required dependencies but having the following python 3 versions of the packages
-numpy, opencv, matplotlib installed should be sufficient.
+numpy, opencv, matplotlib, moviepy installed should be sufficient.
 
 ## Files
 The following files are contained:
