@@ -15,6 +15,14 @@ The goals / steps of this project are the following:
 * Warp the detected lane boundaries back onto the original image.
 * Output visual display of the lane boundaries and numerical estimation of lane curvature and vehicle position.
 
+## Prerequisites
+In order to run the pipeline to produce the project result video at least python 3.6 is needed 
+(since e.g. Python type hints are used in the code - see also https://www.python.org/dev/peps/pep-0484/).
+It will not run with python 2.
+You could also use the file [requirements.txt](requirements.txt) to setup a conda environment with all
+the required dependencies but having the following python 3 versions of the packages
+numpy, opencv, matplotlib installed should be sufficient.
+
 ## Files
 The following files are contained:
 - [result video](project_video_result.mp4)
